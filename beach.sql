@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 04-10-2024 a las 15:51:39
+-- Tiempo de generación: 04-10-2024 a las 19:45:32
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.2.12
 
@@ -130,7 +130,8 @@ CREATE TABLE `usuarios` (
 
 INSERT INTO `usuarios` (`id`, `nombre`, `email`, `contraseña`, `rol`, `sucursal_id`) VALUES
 (1, 'John Doe', 'john@example.com', 'hashed_password_1', '', 1),
-(2, 'Jane Smith', 'jane@example.com', 'hashed_password_2', '', 1);
+(2, 'Jane Smith', 'jane@example.com', 'hashed_password_2', '', 1),
+(3, 'Fernando', 'fernando@admin.cl', '2dfb1e4b813fd54abaa3c96189d2d9fa', 'TI', 1);
 
 -- --------------------------------------------------------
 
@@ -143,16 +144,18 @@ CREATE TABLE `ventas` (
   `fecha` date DEFAULT NULL,
   `monto` decimal(10,2) DEFAULT NULL,
   `usuario_id` int(11) DEFAULT NULL,
-  `sucursal_id` int(11) DEFAULT NULL
+  `sucursal_id` int(11) DEFAULT NULL,
+  `comentario` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Volcado de datos para la tabla `ventas`
 --
 
-INSERT INTO `ventas` (`id`, `fecha`, `monto`, `usuario_id`, `sucursal_id`) VALUES
-(1, '2024-01-01', 100.00, 1, 1),
-(2, '2024-01-02', 200.00, 2, 1);
+INSERT INTO `ventas` (`id`, `fecha`, `monto`, `usuario_id`, `sucursal_id`, `comentario`) VALUES
+(7, '2024-10-04', 250.00, 1, 1, 'Cierre Caja'),
+(8, '2024-10-04', 250.00, 1, 1, 'Cierre Caja'),
+(9, '2024-10-04', 500.00, 1, 1, 'Retiro');
 
 --
 -- Índices para tablas volcadas
@@ -237,7 +240,7 @@ ALTER TABLE `usuarios`
 -- AUTO_INCREMENT de la tabla `ventas`
 --
 ALTER TABLE `ventas`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- Restricciones para tablas volcadas
