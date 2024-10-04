@@ -11,7 +11,16 @@ if ($conn->connect_error) {
     die("Error de conexión: " . $conn->connect_error);
 }
 
-$sucursal_id = $_GET['sucursal_id'];
+$usuario_id = $_SESSION['usuario_id'];
+$sucursal_id = $_GET['sucursal_id'] ?? $_SESSION['sucursal_id'];
+$rol = $_SESSION['rol'];
+
+// Verificar acceso a la sucursal
+if ($rol != 'TI' && $sucursal_id != $_SESSION['sucursal_id']) {
+    echo "No tienes permisos para acceder a esta sucursal.";
+    exit();
+}
+
 $query = "SELECT * FROM inventarios WHERE sucursal_id='$sucursal_id'";
 $result = $conn->query($query);
 ?>
@@ -32,18 +41,20 @@ $result = $conn->query($query);
                 <thead>
                     <tr>
                         <th class="py-2">ID</th>
-                        <th class="py-2">Producto</th>
+                        <th class="py-2">Descripción</th>
                         <th class="py-2">Cantidad</th>
                         <th class="py-2">Fecha</th>
+                        <th class="py-2">Usuario ID</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php while ($row = $result->fetch_assoc()): ?>
                     <tr>
                         <td class="py-2"><?php echo $row['id']; ?></td>
-                        <td class="py-2"><?php echo $row['producto']; ?></td>
+                        <td class="py-2"><?php echo $row['descripcion']; ?></td>
                         <td class="py-2"><?php echo $row['cantidad']; ?></td>
                         <td class="py-2"><?php echo $row['fecha']; ?></td>
+                        <td class="py-2"><?php echo $row['usuario_id']; ?></td>
                     </tr>
                     <?php endwhile; ?>
                 </tbody>
