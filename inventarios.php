@@ -6,7 +6,6 @@ if (!isset($_SESSION['usuario_id']) || !isset($_SESSION['sucursal_id'])) {
 }
 
 $conn = new mysqli('localhost', 'root', '', 'beach');
-
 if ($conn->connect_error) {
     die("Error de conexión: " . $conn->connect_error);
 }
@@ -36,25 +35,25 @@ $result = $conn->query($query);
 <body class="bg-gray-100">
     <div class="container mx-auto mt-10">
         <h1 class="text-3xl font-bold text-center mb-5">Inventarios - Sucursal: <?php echo $sucursal_id; ?></h1>
-        <div class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
-            <table class="min-w-full bg-white">
+        <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md">
+            <table class="min-w-full table-auto">
                 <thead>
-                    <tr>
-                        <th class="py-2">ID</th>
-                        <th class="py-2">Descripción</th>
-                        <th class="py-2">Cantidad</th>
-                        <th class="py-2">Fecha</th>
-                        <th class="py-2">Usuario ID</th>
+                    <tr class="bg-indigo-600 text-white">
+                        <th class="py-2 px-4 text-left">ID</th>
+                        <th class="py-2 px-4 text-left">Descripción</th>
+                        <th class="py-2 px-4 text-left">Cantidad</th>
+                        <th class="py-2 px-4 text-left">Fecha</th>
+                        <th class="py-2 px-4 text-left">Usuario ID</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody class="bg-gray-100">
                     <?php while ($row = $result->fetch_assoc()): ?>
-                    <tr>
-                        <td class="py-2"><?php echo $row['id']; ?></td>
-                        <td class="py-2"><?php echo $row['descripcion']; ?></td>
-                        <td class="py-2"><?php echo $row['cantidad']; ?></td>
-                        <td class="py-2"><?php echo $row['fecha']; ?></td>
-                        <td class="py-2"><?php echo $row['usuario_id']; ?></td>
+                    <tr class="border-b">
+                        <td class="py-2 px-4"><?php echo $row['id']; ?></td>
+                        <td class="py-2 px-4"><?php echo $row['descripcion']; ?></td>
+                        <td class="py-2 px-4"><?php echo $row['cantidad']; ?></td>
+                        <td class="py-2 px-4"><?php echo $row['fecha']; ?></td>
+                        <td class="py-2 px-4"><?php echo $row['usuario_id']; ?></td>
                     </tr>
                     <?php endwhile; ?>
                 </tbody>

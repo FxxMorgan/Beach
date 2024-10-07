@@ -12,8 +12,32 @@ if ($conn->connect_error) {
 }
 
 $sucursal_id = $_GET['sucursal_id'];
+
+// Procesar formulario de nuevo gasto
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $tipo = $_POST['tipo'];
+    $monto = str_replace('.', '', $_POST['monto']); // Eliminar puntos para convertir a entero
+    $fecha = date('Y-m-d');
+    $query = "INSERT INTO gastos (tipo, monto, fecha, sucursal_id) VALUES ('$tipo', '$monto', '$fecha', '$sucursal_id')";
+    if ($conn->query($query) === TRUE) {
+        echo "Gasto agregado exitosamente";
+    } else {
+        echo "Error: " . $conn->error;
+    }
+}
+
 $query = "SELECT * FROM gastos WHERE sucursal_id='$sucursal_id'";
 $result = $conn->query($query);
+
+// Obtener datos para el gráfico
+$gastos_query = "SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes, SUM(monto) AS total FROM gastos WHERE sucursal_id='$sucursal_id' GROUP BY mes";
+$gastos_result = $conn->query($gastos_query);
+$gastos_data = [];
+$gastos_labels = [];
+while ($row = $gastos_result->fetch_assoc()) {
+    $gastos_labels[] = $row['mes'];
+    $gastos_data[] = $row['total'];
+}
 ?>
 
 <!DOCTYPE html>
@@ -23,32 +47,83 @@ $result = $conn->query($query);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ver Gastos</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .chart-container {
+            position: relative;
+            height: 200px;
+            width: 200px;
+        }
+    </style>
 </head>
 <body class="bg-gray-100">
     <div class="container mx-auto mt-10">
         <h1 class="text-3xl font-bold text-center mb-5">Gastos - Sucursal: <?php echo $sucursal_id; ?></h1>
-        <div class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
-            <table class="min-w-full bg-white">
-                <thead>
-                    <tr>
-                        <th class="py-2">ID</th>
-                        <th class="py-2">Descripción</th>
-                        <th class="py-2">Monto</th>
-                        <th class="py-2">Fecha</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php while ($row = $result->fetch_assoc()): ?>
-                    <tr>
-                        <td class="py-2"><?php echo $row['id']; ?></td>
-                        <td class="py-2"><?php echo $row['descripcion']; ?></td>
-                        <td class="py-2"><?php echo $row['monto']; ?></td>
-                        <td class="py-2"><?php echo $row['fecha']; ?></td>
-                    </tr>
-                    <?php endwhile; ?>
-                </tbody>
-            </table>
+        <div class="max-w-4xl mx-auto bg-white p-10 rounded-lg shadow-md">
+            <form method="POST" class="mb-6">
+                <div class="mb-4">
+                    <label for="tipo" class="block text-gray-700 font-bold mb-2">Descripción del Gasto</label>
+                    <select id="tipo" name="tipo" required class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="Internet">Internet</option>
+                        <option value="Electricidad">Electricidad</option>
+                        <option value="Agua">Agua</option>
+                        <option value="Gas">Gas</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label for="monto" class="block text-gray-700 font-bold mb-2">Monto</label>
+                    <input type="text" id="monto" name="monto" required class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="275.100">
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Agregar Gasto</button>
+            </form>
+            <div class="chart-container mx-auto mb-6">
+                <canvas id="gastosChart"></canvas>
+            </div>
+            <div class="mb-4 font-bold text-lg flex justify-between">
+                <div>ID</div>
+                <div>Descripción</div>
+                <div>Monto</div>
+                <div>Fecha</div>
+            </div>
+            <?php while ($row = $result->fetch_assoc()): ?>
+                <div class="gasto-item p-4 bg-white border rounded-lg shadow mb-4 flex justify-between">
+                    <div><?php echo $row['id']; ?></div>
+                    <div><?php echo isset($row['tipo']) ? $row['tipo'] : 'N/A'; ?></div>
+                    <div><?php echo "$" . number_format($row['monto'], 0, '', '.'); ?></div>
+                    <div><?php echo $row['fecha']; ?></div>
+                </div>
+            <?php endwhile; ?>
+            <div class="mt-6">
+                <a href="dashboard.php" class="w-full bg-gray-600 text-white p-3 rounded-lg font-bold hover:bg-gray-700 inline-block text-center">Volver al Dashboard</a>
+            </div>
         </div>
     </div>
+
+    <!-- Chart.js Script -->
+    <script>
+        var ctxGastos = document.getElementById('gastosChart').getContext('2d');
+        var gastosChart = new Chart(ctxGastos, {
+            type: 'line',
+            data: {
+                labels: <?php echo json_encode($gastos_labels); ?>,
+                datasets: [{
+                    label: 'Gastos',
+                    data: <?php echo json_encode($gastos_data); ?>,
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
 </body>
 </html>

@@ -6,28 +6,60 @@ if (!isset($_SESSION['usuario_id']) || !isset($_SESSION['sucursal_id']) || !isse
 }
 
 $conn = new mysqli('localhost', 'root', '', 'beach');
-
 if ($conn->connect_error) {
     die("Error de conexión: " . $conn->connect_error);
 }
 
 $usuario_id = $_SESSION['usuario_id'];
-$sucursal_id = $_SESSION['sucursal_id'];  // Sucursal por defecto
+$sucursal_id = $_SESSION['sucursal_id'];
 $rol = $_SESSION['rol'];
 
-// Si es jefe o TI, puede seleccionar cualquier sucursal
-if (($rol == 'jefe' || $rol == 'TI') && isset($_POST['sucursal_id'])) {
-    $sucursal_id = $_POST['sucursal_id'];  // Sucursal seleccionada
+if (($rol == 'jefe' || $rol == 'TI') && isset($_POST['sucursal_id']) && is_numeric($_POST['sucursal_id'])) {
+    $sucursal_id = $_POST['sucursal_id'];  
 }
 
-// Obtener el nombre de la sucursal seleccionada
-$query = "SELECT nombre FROM sucursales WHERE id='$sucursal_id'";
-$sucursal = $conn->query($query)->fetch_assoc();
+$query = $conn->prepare("SELECT nombre FROM sucursales WHERE id = ?");
+$query->bind_param('i', $sucursal_id);
+$query->execute();
+$sucursal = $query->get_result()->fetch_assoc();
 
-// Obtener todas las sucursales (solo para jefes y TI)
+// Obtener sucursales para jefes y TI
+$sucursales = null;
 if ($rol == 'jefe' || $rol == 'TI') {
-    $sucursales_query = "SELECT id, nombre FROM sucursales";
-    $sucursales = $conn->query($sucursales_query);
+    $sucursales_query = $conn->prepare("SELECT id, nombre FROM sucursales");
+    $sucursales_query->execute();
+    $sucursales = $sucursales_query->get_result();
+}
+
+// Evitar inyección SQL en los gráficos
+$ventas_query = $conn->prepare("SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes, SUM(monto) AS total FROM ventas WHERE sucursal_id = ? GROUP BY mes");
+$ventas_query->bind_param('i', $sucursal_id);
+$ventas_query->execute();
+$ventas_result = $ventas_query->get_result();
+
+// Procesar datos para Chart.js
+$ventas_data = [];
+$ventas_labels = [];
+while ($row = $ventas_result->fetch_assoc()) {
+    $ventas_labels[] = $row['mes'];
+    $ventas_data[] = $row['total'];
+}
+$inventarios_query = "SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes, SUM(cantidad) AS total FROM inventarios WHERE sucursal_id='$sucursal_id' GROUP BY mes";
+$inventarios_result = $conn->query($inventarios_query);
+$inventarios_data = [];
+$inventarios_labels = [];
+while ($row = $inventarios_result->fetch_assoc()) {
+    $inventarios_labels[] = $row['mes'];
+    $inventarios_data[] = $row['total'];
+}
+
+$gastos_query = "SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes, SUM(monto) AS total FROM gastos WHERE sucursal_id='$sucursal_id' GROUP BY mes";
+$gastos_result = $conn->query($gastos_query);
+$gastos_data = [];
+$gastos_labels = [];
+while ($row = $gastos_result->fetch_assoc()) {
+    $gastos_labels[] = $row['mes'];
+    $gastos_data[] = $row['total'];
 }
 ?>
 
