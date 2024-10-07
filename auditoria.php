@@ -41,7 +41,7 @@ $auditoria_result = $conn->query($auditoria_query);
                     <?php while ($row = $auditoria_result->fetch_assoc()): ?>
                     <tr>
                         <td class="py-3 px-4 border-b"><?php echo $row['id']; ?></td>
-                        <td class="py-3 px-4 border-b"><?php echo $row['usuario']; ?></td>
+                        <td class="py-3 px-4 border-b"><?php echo $row['usuario_nombre']; ?></td>
                         <td class="py-3 px-4 border-b"><?php echo $row['accion']; ?></td>
                         <td class="py-3 px-4 border-b"><?php echo $row['fecha']; ?></td>
                     </tr>

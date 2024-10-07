@@ -11,13 +11,22 @@ if ($conn->connect_error) {
     die("Error de conexión: " . $conn->connect_error);
 }
 
-$sucursal_id = $_GET['sucursal_id'];
+// Ajustar la zona horaria a la hora local (por ejemplo, 'America/Santiago' para Chile)
+date_default_timezone_set('America/Santiago');
+
+$sucursal_id = $_GET['sucursal_id'] ?? $_SESSION['sucursal_id'];
 
 // Función de auditoría
-function auditoria($conn, $accion) {
-    $usuario_id = $_SESSION['usuario_id'];
+function auditoria($conn, $accion, $usuario_id) {
     $fecha = date('Y-m-d H:i:s');
-    $query = "INSERT INTO auditoria (usuario_id, accion, fecha) VALUES ('$usuario_id', '$accion', '$fecha')";
+
+    // Obtener el nombre del usuario
+    $usuario_query = "SELECT nombre FROM usuarios WHERE id='$usuario_id'";
+    $usuario_result = $conn->query($usuario_query);
+    $usuario = $usuario_result->fetch_assoc();
+    $usuario_nombre = $usuario['nombre'];
+
+    $query = "INSERT INTO auditoria (usuario_id, usuario_nombre, accion, fecha) VALUES ('$usuario_id', '$usuario_nombre', '$accion', '$fecha')";
     $conn->query($query);
 }
 
@@ -26,9 +35,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $tipo = $_POST['tipo'];
     $monto = str_replace('.', '', $_POST['monto']); // Eliminar puntos para convertir a entero
     $fecha = date('Y-m-d');
+    $usuario_id = $_SESSION['usuario_id'];
+
     $query = "INSERT INTO gastos (tipo, monto, fecha, sucursal_id) VALUES ('$tipo', '$monto', '$fecha', '$sucursal_id')";
     if ($conn->query($query) === TRUE) {
-        auditoria($conn, "Gasto agregado: Tipo: $tipo, Monto: $monto, Fecha: $fecha, Sucursal ID: $sucursal_id");
+        auditoria($conn, "Gasto agregado: Tipo: $tipo, Monto: $monto, Fecha: $fecha, Sucursal ID: $sucursal_id", $usuario_id);
         echo "Gasto agregado exitosamente";
     } else {
         echo "Error: " . $conn->error;

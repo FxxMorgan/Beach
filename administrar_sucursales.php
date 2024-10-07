@@ -60,16 +60,17 @@ if (isset($_POST['eliminar_sucursal'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Administrar Sucursales</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body class="bg-gray-100">
     <div class="container mx-auto mt-10">
         <h1 class="text-3xl font-bold text-center mb-5">Administrar Sucursales</h1>
         <div class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
-            <form method="POST">
+            <form id="agregarSucursalForm" method="POST">
                 <label for="nombre" class="block text-gray-700 font-bold mb-2">Nombre de la Sucursal</label>
                 <input type="text" id="nombre" name="nombre" required
                        class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
-                <button type="submit" name="agregar_sucursal"
+                <button type="submit"
                         class="w-full bg-green-600 text-white p-3 rounded-lg font-bold hover:bg-green-700">Agregar Sucursal</button>
             </form>
         </div>
@@ -88,17 +89,14 @@ if (isset($_POST['eliminar_sucursal'])) {
                     <tr>
                         <td class="py-3 px-4 border-b"><?php echo $row['id']; ?></td>
                         <td class="py-3 px-4 border-b">
-                            <form method="POST" class="inline">
+                            <form class="editarSucursalForm inline">
                                 <input type="hidden" name="id" value="<?php echo $row['id']; ?>">
                                 <input type="text" name="nombre" value="<?php echo $row['nombre']; ?>" class="w-full p-2 border rounded">
                         </td>
                         <td class="py-3 px-4 border-b">
-                                <button type="submit" name="editar_sucursal" class="bg-blue-600 text-white p-2 rounded">Actualizar</button>
+                                <button type="button" class="bg-blue-600 text-white p-2 rounded actualizarSucursalBtn">Actualizar</button>
                             </form>
-                            <form method="POST" class="inline">
-                                <input type="hidden" name="id" value="<?php echo $row['id']; ?>">
-                                <button type="submit" name="eliminar_sucursal" class="bg-red-600 text-white p-2 rounded">Eliminar</button>
-                            </form>
+                            <button type="button" class="bg-red-600 text-white p-2 rounded eliminarSucursalBtn" data-id="<?php echo $row['id']; ?>">Eliminar</button>
                         </td>
                     </tr>
                     <?php endwhile; ?>
@@ -107,5 +105,41 @@ if (isset($_POST['eliminar_sucursal'])) {
         </div>
         <a href="dashboard.php" class="block mt-4 text-center text-blue-500 hover:underline">Volver al Dashboard</a>
     </div>
+    <script>
+        $(document).ready(function() {
+            $('#agregarSucursalForm').on('submit', function(e) {
+                e.preventDefault();
+                var nombre = $('#nombre').val();
+                $.post('', { agregar_sucursal: true, nombre: nombre }, function(response) {
+                    alert('Sucursal agregada exitosamente');
+                    location.reload();
+                }).fail(function() {
+                    alert('Error al agregar la sucursal');
+                });
+            });
+
+            $('.actualizarSucursalBtn').on('click', function() {
+                var form = $(this).closest('form');
+                var id = form.find('input[name="id"]').val();
+                var nombre = form.find('input[name="nombre"]').val();
+                $.post('', { editar_sucursal: true, id: id, nombre: nombre }, function(response) {
+                    alert('Sucursal actualizada exitosamente');
+                    location.reload();
+                }).fail(function() {
+                    alert('Error al actualizar la sucursal');
+                });
+            });
+
+            $('.eliminarSucursalBtn').on('click', function() {
+                var id = $(this).data('id');
+                $.post('', { eliminar_sucursal: true, id: id }, function(response) {
+                    alert('Sucursal eliminada exitosamente');
+                    location.reload();
+                }).fail(function() {
+                    alert('Error al eliminar la sucursal');
+                });
+            });
+        });
+    </script>
 </body>
 </html>

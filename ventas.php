@@ -25,8 +25,30 @@ $sucursal = $sucursal_result->fetch_assoc();
 // Función de auditoría
 function auditoria($conn, $accion, $usuario_id) {
     $fecha = date('Y-m-d H:i:s');
-    $query = "INSERT INTO auditoria (usuario_id, accion, fecha) VALUES ('$usuario_id', '$accion', '$fecha')";
-    $conn->query($query);
+
+    // Obtener el nombre del usuario
+    $usuario_query = "SELECT nombre FROM usuarios WHERE id='$usuario_id'";
+    $usuario_result = $conn->query($usuario_query);
+
+    // Depuración
+    if ($usuario_result) {
+        echo "Usuario query ejecutado correctamente.<br>";
+    } else {
+        echo "Error en usuario query: " . $conn->error . "<br>";
+    }
+
+    $usuario = $usuario_result->fetch_assoc();
+    $usuario_nombre = $usuario['nombre'];
+
+    // Depuración
+    echo "Usuario ID: $usuario_id, Nombre: $usuario_nombre<br>";
+
+    $query = "INSERT INTO auditoria (usuario_id, usuario_nombre, accion, fecha) VALUES ('$usuario_id', '$usuario_nombre', '$accion', '$fecha')";
+    if ($conn->query($query) === TRUE) {
+        echo "Auditoría registrada correctamente.<br>";
+    } else {
+        echo "Error en auditoría: " . $conn->error . "<br>";
+    }
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {

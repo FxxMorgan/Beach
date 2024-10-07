@@ -1,15 +1,25 @@
 <?php
 session_start();
-$conn = new mysqli('localhost', 'root', '', 'beach');
+if (!isset($_SESSION['usuario_id']) || !isset($_SESSION['rol']) || ($_SESSION['rol'] != 'jefe' && $_SESSION['rol'] != 'TI')) {
+    header('Location: login.php');
+    exit();
+}
 
+$conn = new mysqli('localhost', 'root', '', 'beach');
 if ($conn->connect_error) {
     die("Error de conexión: " . $conn->connect_error);
 }
 
-// Verificar si el usuario es jefe o TI
-if ($_SESSION['rol'] != 'jefe' && $_SESSION['rol'] != 'TI') {
-    header('Location: dashboard.php');
-    exit();
+// Ajustar zona horaria
+date_default_timezone_set('America/Santiago');
+
+// Función de auditoría
+function auditoria($conn, $accion, $usuario_id) {
+    $fecha = date('Y-m-d H:i:s');
+    $usuario_nombre = $_SESSION['usuario'];
+
+    $query = "INSERT INTO auditoria (usuario_id, usuario_nombre, accion, fecha) VALUES ('$usuario_id', '$usuario_nombre', '$accion', '$fecha')";
+    $conn->query($query);
 }
 
 // Obtener las sucursales para mostrarlas en el formulario
@@ -21,23 +31,17 @@ if (isset($_POST['agregar_usuario'])) {
     $password = password_hash($_POST['password'], PASSWORD_DEFAULT);  // Hash de la contraseña
     $rol = $_POST['rol'];
     $sucursal_id = $_POST['sucursal_id'];
+    $usuario_id = $_SESSION['usuario_id'];
 
     // Insertar el nuevo usuario en la base de datos
     $query = "INSERT INTO usuarios (nombre, email, contraseña, rol, sucursal_id) 
               VALUES ('$nombre', '$email', '$password', '$rol', '$sucursal_id')";
     if ($conn->query($query) === TRUE) {
-        auditoria("Usuario agregado: $nombre ($email), Rol: $rol, Sucursal ID: $sucursal_id");
+        auditoria($conn, "Usuario agregado: $nombre ($email), Rol: $rol, Sucursal ID: $sucursal_id", $usuario_id);
         echo "Usuario agregado exitosamente";
     } else {
         echo "Error: " . $conn->error;
     }
-}
-
-function auditoria($accion) {
-    global $conn;
-    $usuario = $_SESSION['usuario'];
-    $query = "INSERT INTO auditoria (usuario, accion) VALUES ('$usuario', '$accion')";
-    $conn->query($query);
 }
 ?>
 
