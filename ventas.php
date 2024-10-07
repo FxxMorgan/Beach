@@ -11,6 +11,9 @@ if ($conn->connect_error) {
     die("Error de conexión: " . $conn->connect_error);
 }
 
+// Ajustar la zona horaria a la hora local (por ejemplo, 'America/Santiago' para Chile)
+date_default_timezone_set('America/Santiago');
+
 $sucursal_id = $_GET['sucursal_id'] ?? $_SESSION['sucursal_id'];
 $success_message = "";
 
@@ -18,6 +21,13 @@ $success_message = "";
 $sucursal_query = "SELECT nombre FROM sucursales WHERE id='$sucursal_id'";
 $sucursal_result = $conn->query($sucursal_query);
 $sucursal = $sucursal_result->fetch_assoc();
+
+// Función de auditoría
+function auditoria($conn, $accion, $usuario_id) {
+    $fecha = date('Y-m-d H:i:s');
+    $query = "INSERT INTO auditoria (usuario_id, accion, fecha) VALUES ('$usuario_id', '$accion', '$fecha')";
+    $conn->query($query);
+}
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $monto = str_replace('.', '', $_POST['monto']); // Eliminar puntos para convertir a entero
@@ -27,6 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     $insert_query = "INSERT INTO ventas (fecha, monto, usuario_id, sucursal_id, comentario) VALUES ('$fecha', '$monto', '$usuario_id', '$sucursal_id', '$comentario')";
     if ($conn->query($insert_query) === TRUE) {
+        auditoria($conn, "Venta registrada: Monto: $monto, Comentario: $comentario, Fecha: $fecha, Sucursal ID: $sucursal_id", $usuario_id);
         $success_message = "Venta registrada exitosamente";
     } else {
         echo "Error: " . $conn->error;

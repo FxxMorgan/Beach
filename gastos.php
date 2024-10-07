@@ -13,6 +13,14 @@ if ($conn->connect_error) {
 
 $sucursal_id = $_GET['sucursal_id'];
 
+// Función de auditoría
+function auditoria($conn, $accion) {
+    $usuario_id = $_SESSION['usuario_id'];
+    $fecha = date('Y-m-d H:i:s');
+    $query = "INSERT INTO auditoria (usuario_id, accion, fecha) VALUES ('$usuario_id', '$accion', '$fecha')";
+    $conn->query($query);
+}
+
 // Procesar formulario de nuevo gasto
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $tipo = $_POST['tipo'];
@@ -20,6 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $fecha = date('Y-m-d');
     $query = "INSERT INTO gastos (tipo, monto, fecha, sucursal_id) VALUES ('$tipo', '$monto', '$fecha', '$sucursal_id')";
     if ($conn->query($query) === TRUE) {
+        auditoria($conn, "Gasto agregado: Tipo: $tipo, Monto: $monto, Fecha: $fecha, Sucursal ID: $sucursal_id");
         echo "Gasto agregado exitosamente";
     } else {
         echo "Error: " . $conn->error;
