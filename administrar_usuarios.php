@@ -12,6 +12,22 @@ if ($_SESSION['rol'] != 'TI') {
     exit();
 }
 
+// Manejar la actualización de usuarios
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_user'])) {
+    $id = $_POST['id'];
+    $nombre = $_POST['nombre'];
+    $email = $_POST['email'];
+    $rol = $_POST['rol'];
+
+    $update_query = "UPDATE usuarios SET nombre='$nombre', email='$email', rol='$rol' WHERE id='$id'";
+    if ($conn->query($update_query) === TRUE) {
+        auditoria("Usuario $id actualizado");
+        echo "<script>alert('Usuario actualizado exitosamente');</script>";
+    } else {
+        echo "<script>alert('Error al actualizar el usuario');</script>";
+    }
+}
+
 // Obtener los usuarios de la sucursal seleccionada
 $usuarios_query = "SELECT * FROM usuarios";
 $usuarios_result = $conn->query($usuarios_query);
@@ -69,7 +85,7 @@ function auditoria($accion) {
                                 </select>
                         </td>
                         <td class="py-3 px-4 border-b">
-                                <button type="button" class="bg-blue-600 text-white p-2 rounded" onclick="editarUsuario(<?php echo $row['id']; ?>)">Actualizar</button>
+                                <button type="submit" name="update_user" class="bg-blue-600 text-white p-2 rounded">Actualizar</button>
                             </form>
                             <button type="button" class="bg-red-600 text-white p-2 rounded" onclick="confirmDelete(<?php echo $row['id']; ?>)">Eliminar</button>
                         </td>
@@ -97,24 +113,6 @@ function auditoria($accion) {
         </div>
     </div>
     <script>
-        function editarUsuario(id) {
-            var nombre = $("input[name='nombre'][value='" + id + "']").val();
-            var email = $("input[name='email'][value='" + id + "']").val();
-            var rol = $("select[name='rol'][value='" + id + "']").val();
-
-            $.post("editar_usuario.php", {
-                id: id,
-                nombre: nombre,
-                email: email,
-                rol: rol
-            }).done(function(data) {
-                alert("Usuario actualizado exitosamente");
-                location.reload();
-            }).fail(function() {
-                alert("Error al actualizar el usuario");
-            });
-        }
-
         function confirmDelete(userId) {
             document.getElementById('deleteUserId').value = userId;
             document.getElementById('confirmModal').classList.remove('hidden');

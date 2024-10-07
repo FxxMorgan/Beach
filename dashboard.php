@@ -1,29 +1,39 @@
 <?php
 session_start();
+
+// Redirigir si el usuario no ha iniciado sesión
 if (!isset($_SESSION['usuario_id']) || !isset($_SESSION['sucursal_id']) || !isset($_SESSION['rol'])) {
     header('Location: login.php');
     exit();
 }
 
-$conn = new mysqli('localhost', 'root', '', 'beach');
-if ($conn->connect_error) {
-    die("Error de conexión: " . $conn->connect_error);
+// Función para obtener la conexión a la base de datos
+function get_db_connection() {
+    $conn = new mysqli('localhost', 'root', '', 'beach');
+    if ($conn->connect_error) {
+        die("Error de conexión: " . $conn->connect_error);
+    }
+    return $conn;
 }
+
+$conn = get_db_connection();
 
 $usuario_id = $_SESSION['usuario_id'];
 $sucursal_id = $_SESSION['sucursal_id'];
 $rol = $_SESSION['rol'];
 
+// Validar y sanitizar el sucursal_id enviado por POST
 if (($rol == 'jefe' || $rol == 'TI') && isset($_POST['sucursal_id']) && is_numeric($_POST['sucursal_id'])) {
-    $sucursal_id = $_POST['sucursal_id'];  
+    $sucursal_id = (int) $_POST['sucursal_id'];
 }
 
+// Obtener el nombre de la sucursal seleccionada
 $query = $conn->prepare("SELECT nombre FROM sucursales WHERE id = ?");
 $query->bind_param('i', $sucursal_id);
 $query->execute();
 $sucursal = $query->get_result()->fetch_assoc();
 
-// Obtener sucursales para jefes y TI
+// Obtener lista de sucursales para los roles jefe y TI
 $sucursales = null;
 if ($rol == 'jefe' || $rol == 'TI') {
     $sucursales_query = $conn->prepare("SELECT id, nombre FROM sucursales");
@@ -31,36 +41,68 @@ if ($rol == 'jefe' || $rol == 'TI') {
     $sucursales = $sucursales_query->get_result();
 }
 
-// Evitar inyección SQL en los gráficos
-$ventas_query = $conn->prepare("SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes, SUM(monto) AS total FROM ventas WHERE sucursal_id = ? GROUP BY mes");
-$ventas_query->bind_param('i', $sucursal_id);
-$ventas_query->execute();
-$ventas_result = $ventas_query->get_result();
+// Validación del rango de tiempo
+$time_range = isset($_POST['time_range']) ? $_POST['time_range'] : 'month';
+$start_date = isset($_POST['start_date']) ? $_POST['start_date'] : null;
+$end_date = isset($_POST['end_date']) ? $_POST['end_date'] : null;
+$date_condition = '';
+$date_format = '%Y-%m'; // Valor por defecto
+
+// Configuración de formato y condición de fecha según la selección del usuario
+switch ($time_range) {
+    case 'day':
+        $date_format = '%Y-%m-%d';
+        break;
+    case 'year':
+        $date_format = '%Y';
+        break;
+    case 'custom':
+        if ($start_date && $end_date) {
+            $date_format = '%Y-%m-%d';
+            $date_condition = "AND fecha BETWEEN ? AND ?";
+        }
+        break;
+    case 'month':
+    default:
+        $date_format = '%Y-%m';
+        break;
+}
+
+// Función para obtener datos de la base de datos
+function get_data($conn, $table, $sucursal_id, $date_format, $date_condition, $column, $start_date = null, $end_date = null) {
+    if ($date_condition) {
+        $query = $conn->prepare("SELECT DATE_FORMAT(fecha, '$date_format') AS periodo, SUM($column) AS total FROM $table WHERE sucursal_id = ? $date_condition GROUP BY periodo");
+        $query->bind_param('iss', $sucursal_id, $start_date, $end_date);
+    } else {
+        $query = $conn->prepare("SELECT DATE_FORMAT(fecha, '$date_format') AS periodo, SUM($column) AS total FROM $table WHERE sucursal_id = ? GROUP BY periodo");
+        $query->bind_param('i', $sucursal_id);
+    }
+    $query->execute();
+    return $query->get_result();
+}
+
+// Obtener datos de ventas, inventarios y gastos
+$ventas_result = get_data($conn, 'ventas', $sucursal_id, $date_format, $date_condition, 'monto', $start_date, $end_date);
+$inventarios_result = get_data($conn, 'inventarios', $sucursal_id, $date_format, $date_condition, 'cantidad', $start_date, $end_date); // 'cantidad' en vez de 'monto'
+$gastos_result = get_data($conn, 'gastos', $sucursal_id, $date_format, $date_condition, 'monto', $start_date, $end_date);
 
 // Procesar datos para Chart.js
-$ventas_data = [];
-$ventas_labels = [];
-while ($row = $ventas_result->fetch_assoc()) {
-    $ventas_labels[] = $row['mes'];
-    $ventas_data[] = $row['total'];
-}
-$inventarios_query = "SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes, SUM(cantidad) AS total FROM inventarios WHERE sucursal_id='$sucursal_id' GROUP BY mes";
-$inventarios_result = $conn->query($inventarios_query);
-$inventarios_data = [];
-$inventarios_labels = [];
-while ($row = $inventarios_result->fetch_assoc()) {
-    $inventarios_labels[] = $row['mes'];
-    $inventarios_data[] = $row['total'];
+function process_data($result) {
+    $data = [];
+    $labels = [];
+    while ($row = $result->fetch_assoc()) {
+        $labels[] = $row['periodo'];
+        $data[] = $row['total'];
+    }
+    return [$labels, $data];
 }
 
-$gastos_query = "SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes, SUM(monto) AS total FROM gastos WHERE sucursal_id='$sucursal_id' GROUP BY mes";
-$gastos_result = $conn->query($gastos_query);
-$gastos_data = [];
-$gastos_labels = [];
-while ($row = $gastos_result->fetch_assoc()) {
-    $gastos_labels[] = $row['mes'];
-    $gastos_data[] = $row['total'];
-}
+list($ventas_labels, $ventas_data) = process_data($ventas_result);
+list($inventarios_labels, $inventarios_data) = process_data($inventarios_result);
+list($gastos_labels, $gastos_data) = process_data($gastos_result);
+
+// Cerrar conexión
+$conn->close();
 ?>
 
 <!DOCTYPE html>
@@ -74,8 +116,8 @@ while ($row = $gastos_result->fetch_assoc()) {
     <style>
         .chart-container {
             position: relative;
-            height: 200px;
-            width: 200px;
+            height: 300px;
+            width: 300px;
         }
     </style>
 </head>
@@ -92,130 +134,134 @@ while ($row = $gastos_result->fetch_assoc()) {
                     <a href="administrar_sucursales.php" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Administrar Sucursales</a>
                 <?php endif; ?>
             </nav>
-            <?php if ($rol == 'TI' || $rol == 'jefe' || $rol == 'encargado'): ?>
-                <h2>Bienvenido, <?php echo ucfirst($rol); ?></h2>
-                <p>Acceso a la sucursal: <?php echo isset($sucursal['nombre']) ? $sucursal['nombre'] : 'No seleccionada'; ?></p>
 
-                <!-- Formulario de selección de sucursal (solo para jefes y TI) -->
-                <?php if ($rol == 'jefe' || $rol == 'TI'): ?>
-                    <form method="POST" class="mb-6">
-                        <select name="sucursal_id" class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
-                            <?php while ($row = $sucursales->fetch_assoc()): ?>
-                                <option value="<?php echo $row['id']; ?>" <?php echo ($row['id'] == $sucursal_id) ? 'selected' : ''; ?>>
-                                    <?php echo $row['nombre']; ?>
-                                </option>
-                            <?php endwhile; ?>
-                        </select>
-                        <button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Ver sucursal</button>
-                    </form>
-                    <hr>
-                <?php endif; ?>
-
-                <!-- Charts Section -->
-                <div class="charts grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div class="chart-container">
-                        <canvas id="ventasChart"></canvas>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="inventariosChart"></canvas>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="gastosChart"></canvas>
-                    </div>
+            <!-- Formulario de selección de rango de tiempo -->
+            <form method="POST" class="mb-6">
+                <label for="time_range" class="block text-gray-700 font-bold mb-2">Seleccione el rango de tiempo:</label>
+                <select name="time_range" id="time_range" class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
+                    <option value="day">Día</option>
+                    <option value="month">Mes</option>
+                    <option value="year">Año</option>
+                    <option value="custom">Periodo personalizado</option>
+                </select>
+                <div id="custom_dates" class="hidden">
+                    <label for="start_date" class="block text-gray-700 font-bold mb-2">Fecha de inicio:</label>
+                    <input type="date" name="start_date" id="start_date" class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
+                    <label for="end_date" class="block text-gray-700 font-bold mb-2">Fecha de fin:</label>
+                    <input type="date" name="end_date" id="end_date" class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
                 </div>
+                <button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Aplicar</button>
+            </form>
 
-                <!-- Chart.js Script -->
-                <script>
-                    var ctxVentas = document.getElementById('ventasChart').getContext('2d');
-                    var ventasChart = new Chart(ctxVentas, {
-                        type: 'bar',
-                        data: {
-                            labels: <?php echo json_encode($ventas_labels); ?>,
-                            datasets: [{
-                                label: 'Ventas',
-                                data: <?php echo json_encode($ventas_data); ?>,
-                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                                borderColor: 'rgba(75, 192, 192, 1)',
-                                borderWidth: 1
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: {
-                                y: {
-                                    beginAtZero: true
-                                }
+            <script>
+                document.getElementById('time_range').addEventListener('change', function () {
+                    var customDates = document.getElementById('custom_dates');
+                    if (this.value === 'custom') {
+                        customDates.classList.remove('hidden');
+                    } else {
+                        customDates.classList.add('hidden');
+                    }
+                });
+            </script>
+
+            <hr>
+
+            <!-- Sección de gráficos -->
+            <div class="charts grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="chart-container">
+                    <canvas id="ventasChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="inventariosChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="gastosChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Script de Chart.js -->
+            <script>
+                var ctxVentas = document.getElementById('ventasChart').getContext('2d');
+                var ventasChart = new Chart(ctxVentas, {
+                    type: 'bar',
+                    data: {
+                        labels: <?php echo json_encode($ventas_labels); ?>,
+                        datasets: [{
+                            label: 'Ventas',
+                            data: <?php echo json_encode($ventas_data); ?>,
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true
                             }
                         }
-                    });
+                    }
+                });
 
-                    var ctxInventarios = document.getElementById('inventariosChart').getContext('2d');
-                    var inventariosChart = new Chart(ctxInventarios, {
-                        type: 'line',
-                        data: {
-                            labels: <?php echo json_encode($inventarios_labels); ?>,
-                            datasets: [{
-                                label: 'Inventarios',
-                                data: <?php echo json_encode($inventarios_data); ?>,
-                                backgroundColor: 'rgba(153, 102, 255, 0.2)',
-                                borderColor: 'rgba(153, 102, 255, 1)',
-                                borderWidth: 1
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: {
-                                y: {
-                                    beginAtZero: true
-                                }
+                var ctxInventarios = document.getElementById('inventariosChart').getContext('2d');
+                var inventariosChart = new Chart(ctxInventarios, {
+                    type: 'line',
+                    data: {
+                        labels: <?php echo json_encode($inventarios_labels); ?>,
+                        datasets: [{
+                            label: 'Inventarios',
+                            data: <?php echo json_encode($inventarios_data); ?>,
+                            backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                            borderColor: 'rgba(153, 102, 255, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true
                             }
                         }
-                    });
+                    }
+                });
 
-                    var ctxGastos = document.getElementById('gastosChart').getContext('2d');
-                    var gastosChart = new Chart(ctxGastos, {
-                        type: 'pie',
-                        data: {
-                            labels: <?php echo json_encode($gastos_labels); ?>,
-                            datasets: [{
-                                label: 'Gastos',
-                                data: <?php echo json_encode($gastos_data); ?>,
-                                backgroundColor: [
-                                    'rgba(255, 99, 132, 0.2)',
-                                    'rgba(54, 162, 235, 0.2)',
-                                    'rgba(255, 206, 86, 0.2)',
-                                    'rgba(75, 192, 192, 0.2)',
-                                    'rgba(153, 102, 255, 0.2)',
-                                    'rgba(255, 159, 64, 0.2)'
-                                ],
-                                borderColor: [
-                                    'rgba(255, 99, 132, 1)',
-                                    'rgba(54, 162, 235, 1)',
-                                    'rgba(255, 206, 86, 1)',
-                                    'rgba(75, 192, 192, 1)',
-                                    'rgba(153, 102, 255, 1)',
-                                    'rgba(255, 159, 64, 1)'
-                                ],
-                                borderWidth: 1
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: {
-                                y: {
-                                    beginAtZero: true
-                                }
-                            }
-                        }
-                    });
-                </script>
-
-            <?php else: ?>
-                <p>No tienes permisos para acceder a esta sección.</p>
-            <?php endif; ?>
+                var ctxGastos = document.getElementById('gastosChart').getContext('2d');
+                var gastosChart = new Chart(ctxGastos, {
+                    type: 'pie',
+                    data: {
+                        labels: <?php echo json_encode($gastos_labels); ?>,
+                        datasets: [{
+                            label: 'Gastos',
+                            data: <?php echo json_encode($gastos_data); ?>,
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.2)',
+                                'rgba(54, 162, 235, 0.2)',
+                                'rgba(255, 206, 86, 0.2)',
+                                'rgba(75, 192, 192, 0.2)',
+                                'rgba(153, 102, 255, 0.2)',
+                                'rgba(255, 159, 64, 0.2)'
+                            ],
+                            borderColor: [
+                                'rgba(255, 99, 132, 1)',
+                                'rgba(54, 162, 235, 1)',
+                                'rgba(255, 206, 86, 1)',
+                                'rgba(75, 192, 192, 1)',
+                                'rgba(153, 102, 255, 1)',
+                                'rgba(255, 159, 64, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
+                });
+            </script>
         </div>
     </div>
 </body>
