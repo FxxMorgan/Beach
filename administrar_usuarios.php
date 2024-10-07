@@ -6,16 +6,14 @@ if ($conn->connect_error) {
     die("Error de conexión: " . $conn->connect_error);
 }
 
-// Verificar si el usuario es jefe o TI
-if ($_SESSION['rol'] != 'jefe' && $_SESSION['rol'] != 'TI') {
+// Verificar si el usuario es TI
+if ($_SESSION['rol'] != 'TI') {
     header('Location: dashboard.php');
     exit();
 }
 
 // Obtener las sucursales para mostrarlas en el formulario
 $sucursales = $conn->query("SELECT id, nombre FROM sucursales");
-
-$sucursal_id = $_SESSION['sucursal_id']; // Sucursal seleccionada desde el dashboard
 
 if (isset($_POST['agregar_usuario'])) {
     $nombre = $_POST['nombre'];
@@ -28,6 +26,7 @@ if (isset($_POST['agregar_usuario'])) {
     $query = "INSERT INTO usuarios (nombre, email, contraseña, rol, sucursal_id) 
               VALUES ('$nombre', '$email', '$password', '$rol', '$sucursal_id')";
     if ($conn->query($query) === TRUE) {
+        auditoria("Usuario agregado: $nombre ($email), Rol: $rol, Sucursal ID: $sucursal_id");
         echo "Usuario agregado exitosamente";
     } else {
         echo "Error: " . $conn->error;
@@ -43,6 +42,7 @@ if (isset($_POST['editar_usuario'])) {
     // Actualizar el usuario en la base de datos
     $query = "UPDATE usuarios SET nombre='$nombre', email='$email', rol='$rol' WHERE id='$id'";
     if ($conn->query($query) === TRUE) {
+        auditoria("Usuario editado: $nombre ($email), Rol: $rol, ID: $id");
         echo "Usuario actualizado exitosamente";
     } else {
         echo "Error: " . $conn->error;
@@ -83,10 +83,11 @@ if (isset($_POST['confirmar_eliminar_usuario'])) {
         $eliminar_ventas_query = "DELETE FROM ventas WHERE usuario_id='$id'";
         $conn->query($eliminar_ventas_query);
     }
-    
+
     // Eliminar el usuario de la base de datos
     $eliminar_usuario_query = "DELETE FROM usuarios WHERE id='$id'";
     if ($conn->query($eliminar_usuario_query) === TRUE) {
+        auditoria("Usuario eliminado: ID $id");
         echo "Usuario eliminado exitosamente";
     } else {
         echo "Error: " . $conn->error;
@@ -94,10 +95,16 @@ if (isset($_POST['confirmar_eliminar_usuario'])) {
 }
 
 // Obtener los usuarios de la sucursal seleccionada
-$usuarios_query = "SELECT * FROM usuarios WHERE sucursal_id='$sucursal_id'";
+$usuarios_query = "SELECT * FROM usuarios";
 $usuarios_result = $conn->query($usuarios_query);
-?>
 
+function auditoria($accion) {
+    global $conn;
+    $usuario = $_SESSION['usuario'];
+    $query = "INSERT INTO auditoria (usuario, accion) VALUES ('$usuario', '$accion')";
+    $conn->query($query);
+}
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -108,44 +115,38 @@ $usuarios_result = $conn->query($usuarios_query);
 </head>
 <body class="bg-gray-100">
     <div class="container mx-auto mt-10">
-        <h1 class="text-3xl font-bold text-center mb-5">Administrar Usuarios - Sucursal: <?php echo $sucursal_id; ?></h1>
+        <h1 class="text-3xl font-bold text-center mb-5">Administrar Usuarios</h1>
         <div class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
             <form method="POST">
                 <label for="nombre" class="block text-gray-700 font-bold mb-2">Nombre</label>
                 <input type="text" id="nombre" name="nombre" required
                        class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
-
                 <label for="email" class="block text-gray-700 font-bold mb-2">Correo Electrónico</label>
                 <input type="email" id="email" name="email" required
                        class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
-
                 <label for="password" class="block text-gray-700 font-bold mb-2">Contraseña</label>
                 <input type="password" id="password" name="password" required
                        class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
-
                 <label for="rol" class="block text-gray-700 font-bold mb-2">Rol</label>
                 <select id="rol" name="rol" required
                         class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
+                    <option value="TI">TI</option>
                     <option value="jefe">Jefe</option>
                     <option value="encargado">Encargado</option>
                 </select>
-
                 <label for="sucursal_id" class="block text-gray-700 font-bold mb-2">Sucursal</label>
                 <select id="sucursal_id" name="sucursal_id" required
                         class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
                     <?php while ($row = $sucursales->fetch_assoc()): ?>
-                        <option value="<?php echo $row['id']; ?>" <?php echo ($row['id'] == $sucursal_id) ? 'selected' : ''; ?>>
-                            <?php echo $row['nombre']; ?>
-                        </option>
+                        <option value="<?php echo $row['id']; ?>"><?php echo $row['nombre']; ?></option>
                     <?php endwhile; ?>
                 </select>
-
                 <button type="submit" name="agregar_usuario"
                         class="w-full bg-green-600 text-white p-3 rounded-lg font-bold hover:bg-green-700">Agregar Usuario</button>
             </form>
         </div>
         <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md mt-10">
-            <h2 class="text-2xl font-bold mb-5">Usuarios de la Sucursal</h2>
+            <h2 class="text-2xl font-bold mb-5">Usuarios</h2>
             <table class="min-w-full bg-white">
                 <thead>
                     <tr>
@@ -170,6 +171,7 @@ $usuarios_result = $conn->query($usuarios_query);
                         </td>
                         <td class="py-3 px-4 border-b">
                                 <select name="rol" class="w-full p-2 border rounded">
+                                    <option value="TI" <?php echo ($row['rol'] == 'TI') ? 'selected' : ''; ?>>TI</option>
                                     <option value="jefe" <?php echo ($row['rol'] == 'jefe') ? 'selected' : ''; ?>>Jefe</option>
                                     <option value="encargado" <?php echo ($row['rol'] == 'encargado') ? 'selected' : ''; ?>>Encargado</option>
                                 </select>
@@ -188,7 +190,6 @@ $usuarios_result = $conn->query($usuarios_query);
             </table>
         </div>
     </div>
-
     <!-- Modal de Confirmación -->
     <div id="confirmModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center">
         <div class="bg-white p-6 rounded-lg shadow-lg">
@@ -199,24 +200,20 @@ $usuarios_result = $conn->query($usuarios_query);
                 <label for="new_usuario_id" class="block text-gray-700 font-bold mb-2">Reasignar datos a otro usuario (opcional)</label>
                 <select id="new_usuario_id" name="new_usuario_id" class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
                     <option value="">Seleccionar usuario</option>
-                    <?php while ($row = $usuarios_result->fetch_assoc()): ?>
+                    <?php foreach ($usuarios_result as $row): ?>
                         <option value="<?php echo $row['id']; ?>"><?php echo $row['nombre']; ?></option>
-                    <?php endwhile; ?>
+                    <?php endforeach; ?>
                 </select>
                 <button type="button" class="bg-gray-600 text-white p-2 rounded mr-2" onclick="closeModal()">Cancelar</button>
                 <button type="submit" name="confirmar_eliminar_usuario" class="bg-red-600 text-white p-2 rounded">Eliminar</button>
             </form>
         </div>
     </div>
-
-    
-
     <script>
         function confirmDelete(userId) {
             document.getElementById('deleteUserId').value = userId;
             document.getElementById('confirmModal').classList.remove('hidden');
         }
-
         function closeModal() {
             document.getElementById('confirmModal').classList.add('hidden');
         }
