@@ -42,29 +42,29 @@ if ($rol == 'jefe' || $rol == 'TI') {
 }
 
 // Validación del rango de tiempo
-$time_range = isset($_POST['time_range']) ? $_POST['time_range'] : 'month';
+$time_range = isset($_POST['time_range']) ? $_POST['time_range'] : 'day';
 $start_date = isset($_POST['start_date']) ? $_POST['start_date'] : null;
 $end_date = isset($_POST['end_date']) ? $_POST['end_date'] : null;
 $date_condition = '';
-$date_format = '%Y-%m'; // Valor por defecto
+$date_format = '%d/%m/%Y'; // Formato de fecha diario
 
 // Configuración de formato y condición de fecha según la selección del usuario
 switch ($time_range) {
     case 'day':
-        $date_format = '%Y-%m-%d';
+        $date_format = '%d/%m/%Y';
         break;
     case 'year':
         $date_format = '%Y';
         break;
     case 'custom':
         if ($start_date && $end_date) {
-            $date_format = '%Y-%m-%d';
+            $date_format = '%d/%m/%Y';
             $date_condition = "AND fecha BETWEEN ? AND ?";
         }
         break;
     case 'month':
     default:
-        $date_format = '%Y-%m';
+        $date_format = '%m/%Y';
         break;
 }
 
@@ -135,133 +135,146 @@ $conn->close();
                 <?php endif; ?>
             </nav>
 
-            <!-- Formulario de selección de rango de tiempo -->
-            <form method="POST" class="mb-6">
-                <label for="time_range" class="block text-gray-700 font-bold mb-2">Seleccione el rango de tiempo:</label>
-                <select name="time_range" id="time_range" class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
-                    <option value="day">Día</option>
-                    <option value="month">Mes</option>
-                    <option value="year">Año</option>
-                    <option value="custom">Periodo personalizado</option>
-                </select>
-                <div id="custom_dates" class="hidden">
-                    <label for="start_date" class="block text-gray-700 font-bold mb-2">Fecha de inicio:</label>
-                    <input type="date" name="start_date" id="start_date" class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
-                    <label for="end_date" class="block text-gray-700 font-bold mb-2">Fecha de fin:</label>
-                    <input type="date" name="end_date" id="end_date" class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
-                </div>
-                <button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Aplicar</button>
-            </form>
+<!-- Formulario de selección de rango de tiempo -->
+<form method="POST" class="mb-6 bg-white p-6 rounded-lg shadow-md">
+    <label for="time_range" class="block text-gray-700 font-bold mb-2">Seleccione el rango de tiempo:</label>
+    <select name="time_range" id="time_range" class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
+        <option value="day">Día</option>
+        <option value="month">Mes</option>
+        <option value="year">Año</option>
+        <option value="custom">Periodo personalizado</option>
+    </select>
+    
+    <div id="custom_dates" class="hidden mb-4">
+        <label for="start_date" class="block text-gray-700 font-bold mb-2">Fecha de inicio:</label>
+        <input type="date" name="start_date" id="start_date" class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-2">
+        
+        <label for="end_date" class="block text-gray-700 font-bold mb-2">Fecha de fin:</label>
+        <input type="date" name="end_date" id="end_date" class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
+    </div>
+    
+    <button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 transition duration-300">Aplicar</button>
+    
+    <p id="loadingMessage" class="text-gray-500 mt-4 hidden">Actualizando gráficos, por favor espere...</p>
+</form>
 
-            <script>
-                document.getElementById('time_range').addEventListener('change', function () {
-                    var customDates = document.getElementById('custom_dates');
-                    if (this.value === 'custom') {
-                        customDates.classList.remove('hidden');
-                    } else {
-                        customDates.classList.add('hidden');
+<script>
+    document.getElementById('time_range').addEventListener('change', function () {
+        var customDates = document.getElementById('custom_dates');
+        if (this.value === 'custom') {
+            customDates.classList.remove('hidden');
+        } else {
+            customDates.classList.add('hidden');
+        }
+    });
+
+    // Mostrar mensaje de carga al enviar el formulario
+    document.querySelector('form').addEventListener('submit', function () {
+        document.getElementById('loadingMessage').classList.remove('hidden');
+    });
+</script>
+
+<!-- Sección de gráficos -->
+<div class="charts grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div class="chart-container bg-white p-4 rounded-lg shadow-md">
+        <p class="font-bold text-lg mb-2">Ventas</p>
+        <select name="ventasChartType" id="ventasChartType" class="mb-4 w-full p-2 border rounded">
+            <option value="bar">Bar</option>
+            <option value="line">Line</option>
+            <option value="pie">Pie</option>
+        </select>
+        <canvas id="ventasChart"></canvas>
+    </div>
+    <div class="chart-container bg-white p-4 rounded-lg shadow-md">
+        <p class="font-bold text-lg mb-2">Inventarios</p>
+        <select name="inventariosChartType" id="inventariosChartType" class="mb-4 w-full p-2 border rounded">
+            <option value="bar">Bar</option>
+            <option value="line">Line</option>
+            <option value="pie">Pie</option>
+        </select>
+        <canvas id="inventariosChart"></canvas>
+    </div>
+    <div class="chart-container bg-white p-4 rounded-lg shadow-md">
+        <p class="font-bold text-lg mb-2">Gastos</p>
+        <select name="gastosChartType" id="gastosChartType" class="mb-4 w-full p-2 border rounded">
+            <option value="bar">Bar</option>
+            <option value="line">Line</option>
+            <option value="pie">Pie</option>
+        </select>
+        <canvas id="gastosChart"></canvas>
+    </div>
+</div>
+
+<!-- Script de Chart.js -->
+<script>
+    function createChart(ctx, type, labels, data) {
+        return new Chart(ctx, {
+            type: type,
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Datos',
+                    data: data,
+                    backgroundColor: type === 'pie' ? 
+                        [
+                            'rgba(255, 99, 132, 0.2)',
+                            'rgba(54, 162, 235, 0.2)',
+                            'rgba(255, 206, 86, 0.2)',
+                            'rgba(75, 192, 192, 0.2)',
+                            'rgba(153, 102, 255, 0.2)',
+                            'rgba(255, 159, 64, 0.2)'
+                        ] : 'rgba(75, 192, 192, 0.2)',
+                    borderColor: type === 'pie' ? 
+                        [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(153, 102, 255, 1)',
+                            'rgba(255, 159, 64, 1)'
+                        ] : 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
                     }
-                });
-            </script>
+                }
+            }
+        });
+    }
 
-            <hr>
+    // Inicialización de gráficos
+    var ctxVentas = document.getElementById('ventasChart').getContext('2d');
+    var ventasChart = createChart(ctxVentas, 'bar', <?php echo json_encode($ventas_labels); ?>, <?php echo json_encode($ventas_data); ?>);
 
-            <!-- Sección de gráficos -->
-            <div class="charts grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div class="chart-container">
-                    <canvas id="ventasChart"></canvas>
-                </div>
-                <div class="chart-container">
-                    <canvas id="inventariosChart"></canvas>
-                </div>
-                <div class="chart-container">
-                    <canvas id="gastosChart"></canvas>
-                </div>
-            </div>
+    var ctxInventarios = document.getElementById('inventariosChart').getContext('2d');
+    var inventariosChart = createChart(ctxInventarios, 'line', <?php echo json_encode($inventarios_labels); ?>, <?php echo json_encode($inventarios_data); ?>);
 
-            <!-- Script de Chart.js -->
-            <script>
-                var ctxVentas = document.getElementById('ventasChart').getContext('2d');
-                var ventasChart = new Chart(ctxVentas, {
-                    type: 'bar',
-                    data: {
-                        labels: <?php echo json_encode($ventas_labels); ?>,
-                        datasets: [{
-                            label: 'Ventas',
-                            data: <?php echo json_encode($ventas_data); ?>,
-                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: {
-                                beginAtZero: true
-                            }
-                        }
-                    }
-                });
+    var ctxGastos = document.getElementById('gastosChart').getContext('2d');
+    var gastosChart = createChart(ctxGastos, 'pie', <?php echo json_encode($gastos_labels); ?>, <?php echo json_encode($gastos_data); ?>);
 
-                var ctxInventarios = document.getElementById('inventariosChart').getContext('2d');
-                var inventariosChart = new Chart(ctxInventarios, {
-                    type: 'line',
-                    data: {
-                        labels: <?php echo json_encode($inventarios_labels); ?>,
-                        datasets: [{
-                            label: 'Inventarios',
-                            data: <?php echo json_encode($inventarios_data); ?>,
-                            backgroundColor: 'rgba(153, 102, 255, 0.2)',
-                            borderColor: 'rgba(153, 102, 255, 1)',
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: {
-                                beginAtZero: true
-                            }
-                        }
-                    }
-                });
+    // Actualizar tipo de gráfico al seleccionar
+    document.querySelectorAll('select[id$="ChartType"]').forEach(select => {
+        select.addEventListener('change', function() {
+            var chartType = this.value;
+            var chartId = this.name.replace('ChartType', 'Chart');
+            var ctx = document.getElementById(chartId).getContext('2d');
 
-                var ctxGastos = document.getElementById('gastosChart').getContext('2d');
-                var gastosChart = new Chart(ctxGastos, {
-                    type: 'pie',
-                    data: {
-                        labels: <?php echo json_encode($gastos_labels); ?>,
-                        datasets: [{
-                            label: 'Gastos',
-                            data: <?php echo json_encode($gastos_data); ?>,
-                            backgroundColor: [
-                                'rgba(255, 99, 132, 0.2)',
-                                'rgba(54, 162, 235, 0.2)',
-                                'rgba(255, 206, 86, 0.2)',
-                                'rgba(75, 192, 192, 0.2)',
-                                'rgba(153, 102, 255, 0.2)',
-                                'rgba(255, 159, 64, 0.2)'
-                            ],
-                            borderColor: [
-                                'rgba(255, 99, 132, 1)',
-                                'rgba(54, 162, 235, 1)',
-                                'rgba(255, 206, 86, 1)',
-                                'rgba(75, 192, 192, 1)',
-                                'rgba(153, 102, 255, 1)',
-                                'rgba(255, 159, 64, 1)'
-                            ],
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false
-                    }
-                });
-            </script>
+            // Destruir el gráfico anterior
+            if (window[chartId]) {
+                window[chartId].destroy();
+            }
+
+            // Crear nuevo gráfico con el tipo seleccionado
+            window[chartId] = createChart(ctx, chartType, window[chartId + 'Labels'], window[chartId + 'Data']);
+        });
+    });
+</script>
         </div>
     </div>
 </body>
