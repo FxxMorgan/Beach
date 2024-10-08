@@ -38,6 +38,35 @@ if ($rol == 'TI' && isset($_POST['sucursal_id']) && is_numeric($_POST['sucursal_
     $sucursal_id = $_SESSION['sucursal_id'];
 }
 
+// Obtener datos de todas las sucursales para TI
+function get_all_data($conn, $date_format, $date_condition, $start_date, $end_date) {
+    $data = [];
+    $sucursales_query = $conn->prepare("SELECT id, nombre FROM sucursales");
+    $sucursales_query->execute();
+    $sucursales = $sucursales_query->get_result();
+
+    while ($sucursal = $sucursales->fetch_assoc()) {
+        $sucursal_id = $sucursal['id'];
+        $sucursal_nombre = $sucursal['nombre'];
+
+        $ventas_result = get_data($conn, 'ventas', $sucursal_id, $date_format, $date_condition, 'monto', $start_date, $end_date);
+        $inventarios_result = get_data($conn, 'inventarios', $sucursal_id, $date_format, $date_condition, 'cantidad', $start_date, $end_date);
+        $gastos_result = get_data($conn, 'gastos', $sucursal_id, $date_format, $date_condition, 'monto', $start_date, $end_date);
+
+        list($ventas_labels, $ventas_data) = process_data($ventas_result);
+        list($inventarios_labels, $inventarios_data) = process_data($inventarios_result);
+        list($gastos_labels, $gastos_data) = process_data($gastos_result);
+
+        $data[] = [
+            'sucursal' => $sucursal_nombre,
+            'ventas' => ['labels' => $ventas_labels, 'data' => $ventas_data],
+            'inventarios' => ['labels' => $inventarios_labels, 'data' => $inventarios_data],
+            'gastos' => ['labels' => $gastos_labels, 'data' => $gastos_data],
+        ];
+    }
+    return $data;
+}
+
 // Obtener el nombre de la sucursal seleccionada
 $query = $conn->prepare("SELECT nombre FROM sucursales WHERE id = ?");
 $query->bind_param('i', $sucursal_id);
@@ -84,11 +113,6 @@ function get_data($conn, $table, $sucursal_id, $date_format, $date_condition, $c
     return $query->get_result();
 }
 
-// Obtener datos de ventas, inventarios y gastos
-$ventas_result = get_data($conn, 'ventas', $sucursal_id, $date_format, $date_condition, 'monto', $start_date, $end_date);
-$inventarios_result = get_data($conn, 'inventarios', $sucursal_id, $date_format, $date_condition, 'cantidad', $start_date, $end_date); // 'cantidad' en vez de 'monto'
-$gastos_result = get_data($conn, 'gastos', $sucursal_id, $date_format, $date_condition, 'monto', $start_date, $end_date);
-
 // Procesar datos para Chart.js
 function process_data($result) {
     $data = [];
@@ -100,12 +124,7 @@ function process_data($result) {
     return [$labels, $data];
 }
 
-list($ventas_labels, $ventas_data) = process_data($ventas_result);
-list($inventarios_labels, $inventarios_data) = process_data($inventarios_result);
-list($gastos_labels, $gastos_data) = process_data($gastos_result);
-
-// Cerrar conexión
-$conn->close();
+// Cerrar conexión después de que se haya terminado de usar
 ?>
 
 <!DOCTYPE html>
@@ -119,9 +138,9 @@ $conn->close();
     <style>
         .chart-container {
             position: relative;
-            height: 400px; /* Increased height */
-            width: 100%; /* Increased width to full */
-            padding-bottom: 120px; /* Added padding for labels */
+            height: 400px;
+            width: 100%;
+            padding-bottom: 120px;
         }
     </style>
 </head>
@@ -141,168 +160,127 @@ $conn->close();
                 <?php endif; ?>
             </nav>
 
-            <!-- Formulario de selección de sucursal solo para TI -->
-            <?php if ($rol == 'TI'): ?>
-            <form method="POST" class="mb-6 bg-white p-6 rounded-lg shadow-md">
-                <label for="sucursal_id" class="block text-gray-700 font-bold mb-2">Seleccione la sucursal:</label>
-                <select name="sucursal_id" id="sucursal_id" class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
-                    <?php while ($row = $sucursales->fetch_assoc()): ?>
-                        <option value="<?php echo $row['id']; ?>" <?php echo $row['id'] == $sucursal_id ? 'selected' : ''; ?>><?php echo $row['nombre']; ?></option>
-                    <?php endwhile; ?>
-                </select>
-                <button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 transition duration-300">Aplicar</button>
-            </form>
-            <?php endif; ?>
-
             <!-- Formulario de selección de rango de tiempo -->
             <form method="POST" class="mb-6 bg-white p-6 rounded-lg shadow-md">
-                <label for="time_range" class="block text-gray-700 font-bold mb-2">Seleccione el rango de tiempo:</label>
-                <select name="time_range" id="time_range" class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
-                    <option value="day">Día</option>
-                    <option value="month">Mes</option>
-                    <option value="year">Año</option>
-                    <option value="custom">Periodo personalizado</option>
+                <label for="time_range" class="block text-lg font-semibold mb-2">Seleccionar Rango de Tiempo:</label>
+                <select name="time_range" id="time_range" class="border p-2 rounded-md w-1/3 mb-4">
+                    <option value="day" <?php echo $time_range == 'day' ? 'selected' : ''; ?>>Diario</option>
+                    <option value="month" <?php echo $time_range == 'month' ? 'selected' : ''; ?>>Mensual</option>
+                    <option value="year" <?php echo $time_range == 'year' ? 'selected' : ''; ?>>Anual</option>
+                    <option value="custom" <?php echo $time_range == 'custom' ? 'selected' : ''; ?>>Personalizado</option>
                 </select>
-                
-                <div id="custom_dates" class="hidden mb-4">
-                    <label for="start_date" class="block text-gray-700 font-bold mb-2">Fecha de inicio:</label>
-                    <input type="date" name="start_date" id="start_date" class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-2">
-                    
-                    <label for="end_date" class="block text-gray-700 font-bold mb-2">Fecha de fin:</label>
-                    <input type="date" name="end_date" id="end_date" class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
+                <div class="flex mb-4">
+                    <input type="date" name="start_date" value="<?php echo $start_date; ?>" class="border p-2 rounded-md mr-2">
+                    <input type="date" name="end_date" value="<?php echo $end_date; ?>" class="border p-2 rounded-md">
                 </div>
-                
-                <button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 transition duration-300">Aplicar</button>
-                
-                <p id="loadingMessage" class="text-gray-500 mt-4 hidden">Actualizando gráficos, por favor espere...</p>
+                <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">Filtrar</button>
             </form>
 
-            <script>
-                document.getElementById('time_range').addEventListener('change', function () {
-                    var customDates = document.getElementById('custom_dates');
-                    if (this.value === 'custom') {
-                        customDates.classList.remove('hidden');
-                    } else {
-                        customDates.classList.add('hidden');
-                    }
-                });
+            <!-- Gráficos -->
+            <?php
+            $data = get_all_data($conn, $date_format, $date_condition, $start_date, $end_date);
+            foreach ($data as $item) {
+                ?>
+                <div class="mb-10">
+                    <h2 class="text-2xl font-semibold mb-4"><?php echo $item['sucursal']; ?></h2>
 
-                // Mostrar mensaje de carga al enviar el formulario
-                document.querySelector('form').addEventListener('submit', function () {
-                    document.getElementById('loadingMessage').classList.remove('hidden');
-                });
-            </script>
-
-            <!-- Sección de gráficos -->
-            <div class="charts grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div class="chart-container bg-white p-4 rounded-lg shadow-md">
-                    <p class="font-bold text-lg mb-2">Ventas</p>
-                    <select name="ventasChartType" id="ventasChartType" class="mb-6 w-full p-2 border rounded">
-                        <option value="bar">Barra</option>
-                        <option value="line">Linea</option>
-                        <option value="pie">Pie</option>
-                    </select>
-                    <canvas id="ventasChart"></canvas>
-                </div>
-                <div class="chart-container bg-white p-4 rounded-lg shadow-md">
-                    <p class="font-bold text-lg mb-2">Inventarios</p>
-                    <select name="inventariosChartType" id="inventariosChartType" class="mb-6 w-full p-2 border rounded">
-                        <option value="bar">Barra</option>
-                        <option value="line">Linea</option>
-                        <option value="pie">Pie</option>
-                    </select>
-                    <canvas id="inventariosChart"></canvas>
-                </div>
-                <div class="chart-container bg-white p-4 rounded-lg shadow-md">
-                    <p class="font-bold text-lg mb-2">Gastos</p>
-                    <select name="gastosChartType" id="gastosChartType" class="mb- w-full p-2 border rounded">
-                        <option value="bar">Barra</option>
-                        <option value="line">Linea</option>
-                        <option value="pie">Pie</option>
-                    </select>
-                    <canvas id="gastosChart"></canvas>
-                </div>
-            </div>
-
-            <!-- Script de Chart.js -->
-            <script>
-                function createChart(ctx, type, labels, data) {
-                    return new Chart(ctx, {
-                        type: type,
-                        data: {
-                            labels: labels,
-                            datasets: [{
-                                label: 'Datos',
-                                data: data,
-                                backgroundColor: type === 'pie' ? 
-                                    [
-                                        'rgba(255, 99, 132, 0.2)',
-                                        'rgba(54, 162, 235, 0.2)',
-                                        'rgba(255, 206, 86, 0.2)',
-                                        'rgba(75, 192, 192, 0.2)',
-                                        'rgba(153, 102, 255, 0.2)',
-                                        'rgba(255, 159, 64, 0.2)'
-                                    ] : 'rgba(75, 192, 192, 0.2)',
-                                borderColor: type === 'pie' ? 
-                                    [
-                                        'rgba(255, 99, 132, 1)',
-                                        'rgba(54, 162, 235, 1)',
-                                        'rgba(255, 206, 86, 1)',
-                                        'rgba(75, 192, 192, 1)',
-                                        'rgba(153, 102, 255, 1)',
-                                        'rgba(255, 159, 64, 1)'
-                                    ] : 'rgba(75, 192, 192, 1)',
-                                borderWidth: 1
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: {
-                                y: {
-                                    beginAtZero: true
+                    <!-- Ventas -->
+                    <div class="chart-container">
+                        <canvas id="ventas-<?php echo $item['sucursal']; ?>"></canvas>
+                    </div>
+                    <script>
+                        const ctxVentas = document.getElementById('ventas-<?php echo $item['sucursal']; ?>').getContext('2d');
+                        new Chart(ctxVentas, {
+                            type: 'bar',
+                            data: {
+                                labels: <?php echo json_encode($item['ventas']['labels']); ?>,
+                                datasets: [{
+                                    label: 'Ventas',
+                                    data: <?php echo json_encode($item['ventas']['data']); ?>,
+                                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                    borderColor: 'rgba(75, 192, 192, 1)',
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    y: {
+                                        beginAtZero: true
+                                    }
                                 }
                             }
-                        }
-                    });
-                }
+                        });
+                    </script>
+                    
+                    <!-- Inventarios -->
+                    <div class="chart-container">
+                        <canvas id="inventarios-<?php echo $item['sucursal']; ?>"></canvas>
+                    </div>
+                    <script>
+                        const ctxInventarios = document.getElementById('inventarios-<?php echo $item['sucursal']; ?>').getContext('2d');
+                        new Chart(ctxInventarios, {
+                            type: 'line',
+                            data: {
+                                labels: <?php echo json_encode($item['inventarios']['labels']); ?>,
+                                datasets: [{
+                                    label: 'Inventarios',
+                                    data: <?php echo json_encode($item['inventarios']['data']); ?>,
+                                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                    borderColor: 'rgba(54, 162, 235, 1)',
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    y: {
+                                        beginAtZero: true
+                                    }
+                                }
+                            }
+                        });
+                    </script>
 
-                // Inicialización de gráficos
-                var ctxVentas = document.getElementById('ventasChart').getContext('2d');
-                var ventasChart = createChart(ctxVentas, 'bar', <?php echo json_encode($ventas_labels); ?>, <?php echo json_encode($ventas_data); ?>);
-
-                var ctxInventarios = document.getElementById('inventariosChart').getContext('2d');
-                var inventariosChart = createChart(ctxInventarios, 'line', <?php echo json_encode($inventarios_labels); ?>, <?php echo json_encode($inventarios_data); ?>);
-
-                var ctxGastos = document.getElementById('gastosChart').getContext('2d');
-                var gastosChart = createChart(ctxGastos, 'pie', <?php echo json_encode($gastos_labels); ?>, <?php echo json_encode($gastos_data); ?>);
-
-                // Almacenar datos y etiquetas globalmente
-                window.ventasChartLabels = <?php echo json_encode($ventas_labels); ?>;
-                window.ventasChartData = <?php echo json_encode($ventas_data); ?>;
-                window.inventariosChartLabels = <?php echo json_encode($inventarios_labels); ?>;
-                window.inventariosChartData = <?php echo json_encode($inventarios_data); ?>;
-                window.gastosChartLabels = <?php echo json_encode($gastos_labels); ?>;
-                window.gastosChartData = <?php echo json_encode($gastos_data); ?>;
-
-                // Actualizar tipo de gráfico al seleccionar
-                document.querySelectorAll('select[id$="ChartType"]').forEach(select => {
-                    select.addEventListener('change', function() {
-                        var chartType = this.value;
-                        var chartId = this.name.replace('ChartType', 'Chart');
-                        var ctx = document.getElementById(chartId).getContext('2d');
-
-                        // Destruir el gráfico anterior
-                        if (window[chartId]) {
-                            window[chartId].destroy();
-                        }
-
-                        // Crear nuevo gráfico con el tipo seleccionado
-                        window[chartId] = createChart(ctx, chartType, window[chartId + 'Labels'], window[chartId + 'Data']);
-                    });
-                });
-            </script>
+                    <!-- Gastos -->
+                    <div class="chart-container">
+                        <canvas id="gastos-<?php echo $item['sucursal']; ?>"></canvas>
+                    </div>
+                    <script>
+                        const ctxGastos = document.getElementById('gastos-<?php echo $item['sucursal']; ?>').getContext('2d');
+                        new Chart(ctxGastos, {
+                            type: 'line',
+                            data: {
+                                labels: <?php echo json_encode($item['gastos']['labels']); ?>,
+                                datasets: [{
+                                    label: 'Gastos',
+                                    data: <?php echo json_encode($item['gastos']['data']); ?>,
+                                    backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                                    borderColor: 'rgba(255, 159, 64, 1)',
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    y: {
+                                        beginAtZero: true
+                                    }
+                                }
+                            }
+                        });
+                    </script>
+                </div>
+            <?php } ?>
         </div>
     </div>
 </body>
 </html>
+
+<?php
+// Cerrar la conexión al final del script
+$conn->close();
+?>
