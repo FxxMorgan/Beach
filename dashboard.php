@@ -22,9 +22,20 @@ $usuario_id = $_SESSION['usuario_id'];
 $sucursal_id = $_SESSION['sucursal_id'];
 $rol = $_SESSION['rol'];
 
+// Obtener lista de sucursales solo para el rol TI
+$sucursales = null;
+if ($rol == 'TI') {
+    $sucursales_query = $conn->prepare("SELECT id, nombre FROM sucursales");
+    $sucursales_query->execute();
+    $sucursales = $sucursales_query->get_result();
+}
+
 // Validar y sanitizar el sucursal_id enviado por POST
-if (($rol == 'jefe' || $rol == 'TI') && isset($_POST['sucursal_id']) && is_numeric($_POST['sucursal_id'])) {
+if ($rol == 'TI' && isset($_POST['sucursal_id']) && is_numeric($_POST['sucursal_id'])) {
     $sucursal_id = (int) $_POST['sucursal_id'];
+} else if ($rol == 'jefe' || $rol == 'encargado') {
+    // jefe y encargado solo pueden acceder a su sucursal asignada
+    $sucursal_id = $_SESSION['sucursal_id'];
 }
 
 // Obtener el nombre de la sucursal seleccionada
@@ -32,14 +43,6 @@ $query = $conn->prepare("SELECT nombre FROM sucursales WHERE id = ?");
 $query->bind_param('i', $sucursal_id);
 $query->execute();
 $sucursal = $query->get_result()->fetch_assoc();
-
-// Obtener lista de sucursales para los roles jefe y TI
-$sucursales = null;
-if ($rol == 'jefe' || $rol == 'TI') {
-    $sucursales_query = $conn->prepare("SELECT id, nombre FROM sucursales");
-    $sucursales_query->execute();
-    $sucursales = $sucursales_query->get_result();
-}
 
 // Validación del rango de tiempo
 $time_range = isset($_POST['time_range']) ? $_POST['time_range'] : 'day';
@@ -105,7 +108,6 @@ list($gastos_labels, $gastos_data) = process_data($gastos_result);
 $conn->close();
 ?>
 
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -133,9 +135,24 @@ $conn->close();
                 <a href="gastos.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Ver Gastos</a>
                 <?php if ($rol == 'TI'): ?>
                     <a href="administrar_usuarios.php" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Administrar Usuarios</a>
+                    <a href="crear_usuario.php" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Agregar Usuarios</a>
                     <a href="administrar_sucursales.php" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Administrar Sucursales</a>
+                    <a href="auditoria.php" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mt-6 block">Auditoría</a>
                 <?php endif; ?>
             </nav>
+
+            <!-- Formulario de selección de sucursal solo para TI -->
+            <?php if ($rol == 'TI'): ?>
+            <form method="POST" class="mb-6 bg-white p-6 rounded-lg shadow-md">
+                <label for="sucursal_id" class="block text-gray-700 font-bold mb-2">Seleccione la sucursal:</label>
+                <select name="sucursal_id" id="sucursal_id" class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
+                    <?php while ($row = $sucursales->fetch_assoc()): ?>
+                        <option value="<?php echo $row['id']; ?>" <?php echo $row['id'] == $sucursal_id ? 'selected' : ''; ?>><?php echo $row['nombre']; ?></option>
+                    <?php endwhile; ?>
+                </select>
+                <button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 transition duration-300">Aplicar</button>
+            </form>
+            <?php endif; ?>
 
             <!-- Formulario de selección de rango de tiempo -->
             <form method="POST" class="mb-6 bg-white p-6 rounded-lg shadow-md">
