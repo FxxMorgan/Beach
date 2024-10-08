@@ -123,8 +123,6 @@ function process_data($result) {
     }
     return [$labels, $data];
 }
-
-// Cerrar conexión después de que se haya terminado de usar
 ?>
 
 <!DOCTYPE html>
@@ -179,18 +177,23 @@ function process_data($result) {
             <!-- Gráficos -->
             <?php
             $data = get_all_data($conn, $date_format, $date_condition, $start_date, $end_date);
+            $chartCount = 0;
             foreach ($data as $item) {
-                ?>
+                $chartCount++;
+                $ventasId = 'ventas-' . $chartCount;
+                $inventariosId = 'inventarios-' . $chartCount;
+                $gastosId = 'gastos-' . $chartCount;
+            ?>
                 <div class="mb-10">
                     <h2 class="text-2xl font-semibold mb-4"><?php echo $item['sucursal']; ?></h2>
 
                     <!-- Ventas -->
                     <div class="chart-container">
-                        <canvas id="ventas-<?php echo $item['sucursal']; ?>"></canvas>
+                        <canvas id="<?php echo $ventasId; ?>"></canvas>
                     </div>
                     <script>
-                        const ctxVentas = document.getElementById('ventas-<?php echo $item['sucursal']; ?>').getContext('2d');
-                        new Chart(ctxVentas, {
+                        var ctxVentas<?php echo $chartCount; ?> = document.getElementById('<?php echo $ventasId; ?>').getContext('2d');
+                        new Chart(ctxVentas<?php echo $chartCount; ?>, {
                             type: 'bar',
                             data: {
                                 labels: <?php echo json_encode($item['ventas']['labels']); ?>,
@@ -216,11 +219,11 @@ function process_data($result) {
                     
                     <!-- Inventarios -->
                     <div class="chart-container">
-                        <canvas id="inventarios-<?php echo $item['sucursal']; ?>"></canvas>
+                        <canvas id="<?php echo $inventariosId; ?>"></canvas>
                     </div>
                     <script>
-                        const ctxInventarios = document.getElementById('inventarios-<?php echo $item['sucursal']; ?>').getContext('2d');
-                        new Chart(ctxInventarios, {
+                        var ctxInventarios<?php echo $chartCount; ?> = document.getElementById('<?php echo $inventariosId; ?>').getContext('2d');
+                        new Chart(ctxInventarios<?php echo $chartCount; ?>, {
                             type: 'line',
                             data: {
                                 labels: <?php echo json_encode($item['inventarios']['labels']); ?>,
@@ -246,11 +249,11 @@ function process_data($result) {
 
                     <!-- Gastos -->
                     <div class="chart-container">
-                        <canvas id="gastos-<?php echo $item['sucursal']; ?>"></canvas>
+                        <canvas id="<?php echo $gastosId; ?>"></canvas>
                     </div>
                     <script>
-                        const ctxGastos = document.getElementById('gastos-<?php echo $item['sucursal']; ?>').getContext('2d');
-                        new Chart(ctxGastos, {
+                        var ctxGastos<?php echo $chartCount; ?> = document.getElementById('<?php echo $gastosId; ?>').getContext('2d');
+                        new Chart(ctxGastos<?php echo $chartCount; ?>, {
                             type: 'line',
                             data: {
                                 labels: <?php echo json_encode($item['gastos']['labels']); ?>,
