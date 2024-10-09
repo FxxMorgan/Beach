@@ -22,7 +22,7 @@ function auditoria($conn, $accion, $usuario_id) {
     $conn->query($query);
 }
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['ajax'])) {
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $nombre = $_POST['nombre'];
     $email = $_POST['email'];
     $password = password_hash($_POST['password'], PASSWORD_DEFAULT);  // Hash de la contraseña
@@ -32,20 +32,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['ajax'])) {
 
     // Verificar si el 'jefe' selecciona su propia sucursal
     if ($_SESSION['rol'] == 'jefe' && $_SESSION['sucursal_id'] != $sucursal_id) {
-        echo json_encode(['status' => 'error', 'message' => 'No puede asignar usuarios a una sucursal diferente a la suya.']);
-        exit();
-    }
-
-    // Insertar el nuevo usuario en la base de datos
-    $query = "INSERT INTO usuarios (nombre, email, contraseña, rol, sucursal_id) 
-              VALUES ('$nombre', '$email', '$password', '$rol', '$sucursal_id')";
-    if ($conn->query($query) === TRUE) {
-        auditoria($conn, "Usuario agregado: $nombre ($email), Rol: $rol, Sucursal ID: $sucursal_id", $usuario_id);
-        echo json_encode(['status' => 'success', 'message' => 'Usuario agregado exitosamente']);
+        $error_message = 'No puede asignar usuarios a una sucursal diferente a la suya.';
     } else {
-        echo json_encode(['status' => 'error', 'message' => 'Error: ' . $conn->error]);
+        // Verificar si el email ya está registrado
+        $email_check_query = "SELECT id FROM usuarios WHERE email='$email'";
+        $email_check_result = $conn->query($email_check_query);
+        if ($email_check_result->num_rows > 0) {
+            $error_message = 'El correo electrónico ya está registrado.';
+        } else {
+            // Insertar el nuevo usuario en la base de datos
+            $query = "INSERT INTO usuarios (nombre, email, contraseña, rol, sucursal_id) 
+                      VALUES ('$nombre', '$email', '$password', '$rol', '$sucursal_id')";
+            if ($conn->query($query) === TRUE) {
+                auditoria($conn, "Usuario agregado: $nombre ($email), Rol: $rol, Sucursal ID: $sucursal_id", $usuario_id);
+                $success_message = 'Usuario agregado exitosamente';
+            } else {
+                $error_message = 'Error: ' . $conn->error;
+            }
+        }
     }
-    exit();
 }
 
 // Obtener las sucursales para mostrarlas en el formulario
@@ -59,15 +64,34 @@ $sucursales = $conn->query("SELECT id, nombre FROM sucursales");
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agregar Usuario</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <!-- Incluir SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="bg-gray-100">
     <div class="container mx-auto mt-10">
         <h1 class="text-3xl font-bold text-center mb-5">Agregar Nuevo Usuario</h1>
         <div class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
-            <form id="agregar_usuario_form">
+            <?php if (isset($success_message)): ?>
+                <script>
+                    Swal.fire({
+                        title: 'Usuario agregado',
+                        text: '<?php echo $success_message; ?>',
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    }).then(() => {
+                        window.location.href = 'dashboard.php';
+                    });
+                </script>
+            <?php elseif (isset($error_message)): ?>
+                <script>
+                    Swal.fire({
+                        title: 'Error',
+                        text: '<?php echo $error_message; ?>',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                </script>
+            <?php endif; ?>
+            <form method="POST">
                 <label for="nombre" class="block text-gray-700 font-bold mb-2">Nombre</label>
                 <input type="text" id="nombre" name="nombre" required
                        class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
@@ -100,39 +124,5 @@ $sucursales = $conn->query("SELECT id, nombre FROM sucursales");
             <a href="dashboard.php" class="block mt-4 text-center text-blue-500 hover:underline">Volver al Dashboard</a>
         </div>
     </div>
-
-    <script>
-$(document).ready(function() {
-    $('#agregar_usuario_form').submit(function(event) {
-        event.preventDefault();
-        $.ajax({
-            type: 'POST',
-            url: 'crear_usuario.php',
-            data: $(this).serialize() + '&ajax=true',
-            dataType: 'json',
-            success: function(response) {
-                if (response.status === 'success') {
-                    Swal.fire({
-                        title: 'Usuario agregado',
-                        text: response.message,
-                        icon: 'success',
-                        confirmButtonText: 'OK'
-                    }).then(() => {
-                        location.reload();
-                    });
-                } else {
-                    Swal.fire({
-                        title: 'Error',
-                        text: response.message,
-                        icon: 'error',
-                        confirmButtonText: 'OK'
-                    });
-                }
-            }
-        });
-    });
-});
-
-</script>
 </body>
 </html>
