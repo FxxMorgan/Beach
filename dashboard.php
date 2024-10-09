@@ -31,10 +31,10 @@ if ($rol == 'TI') {
 }
 
 // Validar y sanitizar el sucursal_id enviado por POST
-if ($rol == 'TI' && isset($_POST['sucursal_id']) && is_numeric($_POST['sucursal_id'])) {
+if (($rol == 'TI' || $rol == 'jefe') && isset($_POST['sucursal_id']) && is_numeric($_POST['sucursal_id'])) {
     $sucursal_id = (int) $_POST['sucursal_id'];
-} else if ($rol == 'jefe' || $rol == 'encargado') {
-    // jefe y encargado solo pueden acceder a su sucursal asignada
+} else if ($rol == 'encargado') {
+    // encargado solo puede acceder a su sucursal asignada
     $sucursal_id = $_SESSION['sucursal_id'];
 }
 
@@ -150,8 +150,6 @@ if ($rol == 'TI') {
 }
 ?>
 
-
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -177,11 +175,13 @@ if ($rol == 'TI') {
                 <a href="ventas.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Ver Ventas</a>
                 <a href="inventarios.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Ver Inventarios</a>
                 <a href="gastos.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Ver Gastos</a>
-                <?php if ($rol == 'TI'): ?>
-                    <a href="administrar_usuarios.php" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Administrar Usuarios</a>
-                    <a href="crear_usuario.php" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Agregar Usuarios</a>
-                    <a href="administrar_sucursales.php" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Administrar Sucursales</a>
-                    <a href="auditoria.php" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mt-6 block">Auditoría</a>
+                <?php if ($rol == 'TI' || $rol == 'jefe'): ?>
+                    <a href="administrar_usuarios.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Administrar Usuarios</a>
+                    <a href="crear_usuario.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Agregar Usuarios</a>
+                    <?php if ($rol == 'TI'): ?>
+                        <a href="administrar_sucursales.php" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Administrar Sucursales</a>
+                        <a href="auditoria.php" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mt-6 block">Auditoría</a>
+                    <?php endif; ?>
                 <?php endif; ?>
             </nav>
 
