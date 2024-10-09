@@ -23,9 +23,9 @@ if (isset($_POST['agregar_sucursal'])) {
     // Insertar la nueva sucursal en la base de datos
     $query = "INSERT INTO sucursales (nombre) VALUES ('$nombre')";
     if ($conn->query($query) === TRUE) {
-        echo "<script>alert('Sucursal \" . $nombre . \" agregada exitosamente');</script>";
+        echo "<script>Swal.fire('Operación Exitosa', 'Sucursal \" . $nombre . \" agregada exitosamente', 'success');</script>";
     } else {
-        echo "Error: " . $conn->error;
+        echo "<script>Swal.fire('Error', 'Error: " . $conn->error . "', 'error');</script>";
     }
 }
 
@@ -37,9 +37,9 @@ if (isset($_POST['actualizar_sucursal'])) {
     // Actualizar la sucursal en la base de datos
     $query = "UPDATE sucursales SET nombre='$nombre' WHERE id='$id'";
     if ($conn->query($query) === TRUE) {
-        echo "Sucursal actualizada exitosamente";
+        echo "<script>Swal.fire('Operación Exitosa', 'Sucursal actualizada exitosamente', 'success');</script>";
     } else {
-        echo "Error: " . $conn->error;
+        echo "<script>Swal.fire('Error', 'Error: " . $conn->error . "', 'error');</script>";
     }
 }
 
@@ -50,9 +50,9 @@ if (isset($_POST['eliminar_sucursal'])) {
     // Eliminar la sucursal de la base de datos
     $query = "DELETE FROM sucursales WHERE id='$id'";
     if ($conn->query($query) === TRUE) {
-        echo "Sucursal eliminada exitosamente";
+        echo "<script>Swal.fire('Operación Exitosa', 'Sucursal eliminada exitosamente', 'success');</script>";
     } else {
-        echo "Error: " . $conn->error;
+        echo "<script>Swal.fire('Error', 'Error: " . $conn->error . "', 'error');</script>";
     }
 }
 
@@ -74,6 +74,7 @@ if (!function_exists('auditoria')) {
     <title>Administrar Sucursales</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="bg-gray-100">
     <div class="container mx-auto mt-10">
@@ -124,10 +125,11 @@ if (!function_exists('auditoria')) {
                 e.preventDefault();
                 var nombre = $('#nombre').val();
                 $.post('', { agregar_sucursal: true, nombre: nombre }, function(response) {
-                    alert('Sucursal ' + nombre + ' agregada exitosamente');
-                    location.reload();
+                    Swal.fire('Operación Exitosa', 'Sucursal ' + nombre + ' agregada exitosamente', 'success').then(() => {
+                        location.reload();
+                    });
                 }).fail(function() {
-                    alert('Error al agregar la sucursal');
+                    Swal.fire('Error', 'Error al agregar la sucursal', 'error');
                 });
             });
 
@@ -136,20 +138,22 @@ if (!function_exists('auditoria')) {
                 var id = form.find('input[name="id"]').val();
                 var nombre = form.find('input[name="nombre"]').val();
                 $.post('', { editar_sucursal: true, id: id, nombre: nombre }, function(response) {
-                    alert('Sucursal actualizada exitosamente');
-                    location.reload();
+                    Swal.fire('Operación Exitosa', 'Sucursal actualizada exitosamente', 'success').then(() => {
+                        location.reload();
+                    });
                 }).fail(function() {
-                    alert('Error al actualizar la sucursal');
+                    Swal.fire('Error', 'Error al actualizar la sucursal', 'error');
                 });
             });
 
             $('.eliminarSucursalBtn').on('click', function() {
                 var id = $(this).data('id');
                 $.post('', { eliminar_sucursal: true, id: id }, function(response) {
-                    alert('Sucursal eliminada exitosamente');
-                    location.reload();
+                    Swal.fire('Operación Exitosa', 'Sucursal eliminada exitosamente', 'success').then(() => {
+                        location.reload();
+                    });
                 }).fail(function() {
-                    alert('Error al eliminar la sucursal');
+                    Swal.fire('Error', 'Error al eliminar la sucursal', 'error');
                 });
             });
         });

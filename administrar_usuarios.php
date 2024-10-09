@@ -12,11 +12,15 @@ if ($_SESSION['rol'] != 'TI' && $_SESSION['rol'] != 'jefe') {
     exit();
 }
 
-// Definir la función auditoria
+// Check if 'usuario' key exists in the session
+if (!isset($_SESSION['usuario'])) {
+    $_SESSION['usuario'] = 'default_user';
+}
+
 if (!function_exists('auditoria')) {
     function auditoria($accion) {
         global $conn;
-        $usuario = $_SESSION['usuario'];
+        $usuario = isset($_SESSION['usuario']) ? $_SESSION['usuario'] : 'default_user';
         $query = "INSERT INTO auditoria (usuario, accion) VALUES ('$usuario', '$accion')";
         $conn->query($query);
     }
@@ -32,9 +36,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_user'])) {
     $update_query = "UPDATE usuarios SET nombre='$nombre', email='$email', rol='$rol' WHERE id='$id'";
     if ($conn->query($update_query) === TRUE) {
         auditoria("Usuario $id actualizado");
-        echo "<script>alert('Usuario actualizado exitosamente');</script>";
+        echo "<script>Swal.fire('Operación Exitosa', 'Usuario actualizado exitosamente', 'success');</script>";
     } else {
-        echo "<script>alert('Error al actualizar el usuario');</script>";
+        echo "<script>Swal.fire('Error', 'Error al actualizar el usuario', 'error');</script>";
     }
 }
 
@@ -48,28 +52,28 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_user'])) {
         // Reasignar datos en la tabla 'facturas'
         $reassign_facturas = "UPDATE facturas SET usuario_id='$new_user_id' WHERE usuario_id='$id'";
         if (!$conn->query($reassign_facturas)) {
-            echo "<script>alert('Error al reasignar datos en facturas: " . $conn->error . "');</script>";
+            echo "<script>Swal.fire('Error', 'Error al reasignar datos en facturas: " . $conn->error . "', 'error');</script>";
             exit();
         }
 
         // Reasignar datos en la tabla 'gastos'
         $reassign_gastos = "UPDATE gastos SET usuario_id='$new_user_id' WHERE usuario_id='$id'";
         if (!$conn->query($reassign_gastos)) {
-            echo "<script>alert('Error al reasignar datos en gastos: " . $conn->error . "');</script>";
+            echo "<script>Swal.fire('Error', 'Error al reasignar datos en gastos: " . $conn->error . "', 'error');</script>";
             exit();
         }
 
         // Reasignar datos en la tabla 'inventarios'
         $reassign_inventarios = "UPDATE inventarios SET usuario_id='$new_user_id' WHERE usuario_id='$id'";
         if (!$conn->query($reassign_inventarios)) {
-            echo "<script>alert('Error al reasignar datos en inventarios: " . $conn->error . "');</script>";
+            echo "<script>Swal.fire('Error', 'Error al reasignar datos en inventarios: " . $conn->error . "', 'error');</script>";
             exit();
         }
 
         // Reasignar datos en la tabla 'ventas'
         $reassign_ventas = "UPDATE ventas SET usuario_id='$new_user_id' WHERE usuario_id='$id'";
         if (!$conn->query($reassign_ventas)) {
-            echo "<script>alert('Error al reasignar datos en ventas: " . $conn->error . "');</script>";
+            echo "<script>Swal.fire('Error', 'Error al reasignar datos en ventas: " . $conn->error . "', 'error');</script>";
             exit();
         }
 
@@ -80,11 +84,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_user'])) {
     $delete_query = "DELETE FROM usuarios WHERE id='$id'";
     if ($conn->query($delete_query) === TRUE) {
         auditoria("Usuario $id eliminado");
-        echo "<script>alert('Usuario eliminado exitosamente'); window.location.href='administrar_usuarios.php';</script>";
+
+        // Muestra la alerta y redirige después de que el usuario la cierre
+        echo "<script>
+            Swal.fire({
+                title: 'Operación Exitosa',
+                text: 'Usuario eliminado exitosamente',
+                icon: 'success'
+            }).then(() => {
+                // Usar window.location.href para redirigir a la página de usuarios
+                window.location.href = 'administrar_usuarios.php';
+            });
+        </script>";
+        exit();  // Termina la ejecución para evitar que el script continúe ejecutándose
     } else {
-        echo "<script>alert('Error al eliminar el usuario: " . $conn->error . "');</script>";
+        echo "<script>
+            Swal.fire('Error', 'Error al eliminar el usuario: " . $conn->error . "', 'error');
+        </script>";
+        exit();  // Termina la ejecución en caso de error
     }
-    exit();
 }
 
 // Filtrar usuarios por la sucursal del 'jefe'
@@ -114,6 +132,8 @@ if (!function_exists('auditoria')) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Administrar Usuarios</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <!-- Asegúrate de que SweetAlert2 se cargue antes de cualquier uso -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="bg-gray-100">
     <div class="container mx-auto mt-10">
@@ -162,32 +182,45 @@ if (!function_exists('auditoria')) {
         </div>
     </div>
     <!-- Modal de Confirmación -->
-    <div id="confirmModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center">
-        <div class="bg-white p-6 rounded-lg shadow-lg">
-            <h2 class="text-xl font-bold mb-4">Confirmar Eliminación</h2>
-            <p class="mb-4">Está a punto de eliminar este usuario. Esto también eliminará toda la información asociada a este usuario. ¿Desea continuar?</p>
-            <form method="POST">
-                <input type="hidden" id="deleteUserId" name="id">
-                <label for="new_usuario_id" class="block text-gray-700 font-bold mb-2">Reasignar datos a otro usuario (opcional)</label>
-                <select id="new_usuario_id" name="new_usuario_id" class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
-                    <option value="">Seleccionar usuario</option>
-                    <?php foreach ($usuarios_result as $row): ?>
-                        <option value="<?php echo $row['id']; ?>"><?php echo $row['nombre']; ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <button type="button" class="bg-gray-600 text-white p-2 rounded mr-2" onclick="closeModal()">Cancelar</button>
-                <button type="submit" name="delete_user" class="bg-red-600 text-white p-2 rounded">Eliminar</button>
-            </form>
+    <div id="confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center">
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-lg font-bold mb-4">¿Estás seguro de que deseas eliminar este usuario?</h2>
+            <div class="flex justify-between">
+                <button id="confirm-delete" class="bg-red-600 text-white p-2 rounded">Confirmar</button>
+                <button id="cancel-delete" class="bg-gray-400 text-white p-2 rounded">Cancelar</button>
+            </div>
         </div>
     </div>
     <script>
         function confirmDelete(userId) {
-            document.getElementById('deleteUserId').value = userId;
-            document.getElementById('confirmModal').classList.remove('hidden');
-        }
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: "Esta acción no se puede deshacer.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const formData = new FormData();
+                    formData.append('delete_user', true);
+                    formData.append('id', userId);
+                    formData.append('new_usuario_id', '');  // Dejar vacío si no hay reasignación
 
-        function closeModal() {
-            document.getElementById('confirmModal').classList.add('hidden');
+                    fetch('administrar_usuarios.php', {
+                        method: 'POST',
+                        body: formData
+                    }).then(response => response.text())
+                    .then(responseText => {
+                        Swal.fire('Eliminado!', 'El usuario ha sido eliminado.', 'success')
+                            .then(() => {
+                                location.reload();
+                            });
+                    }).catch(error => {
+                        Swal.fire('Error', 'Hubo un problema al eliminar el usuario.', 'error');
+                    });
+                }
+            });
         }
     </script>
 </body>

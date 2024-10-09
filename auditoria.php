@@ -23,6 +23,7 @@ $auditoria_result = $conn->query($auditoria_query);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Auditoría</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="bg-gray-100">
     <div class="container mx-auto mt-10">
@@ -41,7 +42,7 @@ $auditoria_result = $conn->query($auditoria_query);
                     <?php while ($row = $auditoria_result->fetch_assoc()): ?>
                     <tr>
                         <td class="py-3 px-4 border-b"><?php echo $row['id']; ?></td>
-                        <td class="py-3 px-4 border-b"><?php echo $row['usuario_nombre']; ?></td>
+                        <td class="py-3 px-4 border-b"><?php echo $row['usuario']; ?></td>
                         <td class="py-3 px-4 border-b"><?php echo $row['accion']; ?></td>
                         <td class="py-3 px-4 border-b"><?php echo $row['fecha']; ?></td>
                     </tr>

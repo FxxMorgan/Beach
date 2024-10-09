@@ -33,16 +33,34 @@ function auditoria($conn, $accion, $usuario_id) {
 // Procesar formulario de nuevo gasto
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $tipo = $_POST['tipo'];
-    $monto = str_replace('.', '', $_POST['monto']); // Eliminar puntos para convertir a entero
+    $monto = str_replace(['.', ','], '', $_POST['monto']); // Eliminar puntos y comas para convertir a entero
     $fecha = date('Y-m-d');
     $usuario_id = $_SESSION['usuario_id'];
 
+    // Insertar el gasto en la base de datos
     $query = "INSERT INTO gastos (tipo, monto, fecha, sucursal_id) VALUES ('$tipo', '$monto', '$fecha', '$sucursal_id')";
     if ($conn->query($query) === TRUE) {
         auditoria($conn, "Gasto agregado: Tipo: $tipo, Monto: $monto, Fecha: $fecha, Sucursal ID: $sucursal_id", $usuario_id);
-        echo "Gasto agregado exitosamente";
+
+        // Coloca la alerta antes del HTML
+        echo "<script>
+                Swal.fire({
+                    title: 'Monto registrado correctamente',
+                    text: '¿Deseas ingresar más gastos?',
+                    icon: 'success',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí',
+                    cancelButtonText: 'No'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.reload(); // Recarga la página para agregar más gastos
+                    } else {
+                        window.location.href = 'dashboard.php'; // Redirige al dashboard
+                    }
+                });
+              </script>";
     } else {
-        echo "Error: " . $conn->error;
+        echo "<script>Swal.fire('Error', 'Error: " . $conn->error . "', 'error');</script>";
     }
 }
 
@@ -68,6 +86,7 @@ while ($row = $gastos_result->fetch_assoc()) {
     <title>Ver Gastos</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         .chart-container {
             position: relative;
@@ -92,7 +111,7 @@ while ($row = $gastos_result->fetch_assoc()) {
                 </div>
                 <div class="mb-4">
                     <label for="monto" class="block text-gray-700 font-bold mb-2">Monto</label>
-                    <input type="text" id="monto" name="monto" required class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="275.100">
+                    <input type="text" id="monto" name="monto" required class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="275.100" oninput="this.value = this.value.replace(/[^0-9,]/g, '');">
                 </div>
                 <button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Agregar Gasto</button>
             </form>

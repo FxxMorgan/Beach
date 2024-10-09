@@ -18,9 +18,9 @@ if (isset($_POST['agregar_sucursal'])) {
     // Insertar la nueva sucursal en la base de datos
     $query = "INSERT INTO sucursales (nombre) VALUES ('$nombre_sucursal')";
     if ($conn->query($query) === TRUE) {
-        echo "Sucursal agregada exitosamente";
+        echo "<script>Swal.fire('Operación Exitosa', 'Sucursal agregada exitosamente', 'success');</script>";
     } else {
-        echo "Error: " . $conn->error;
+        echo "<script>Swal.fire('Error', 'Error: " . $conn->error . "', 'error');</script>";
     }
 }
 ?>
@@ -32,6 +32,7 @@ if (isset($_POST['agregar_sucursal'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agregar Sucursal</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="bg-gray-100">
     <div class="container mx-auto mt-10">
