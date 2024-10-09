@@ -102,36 +102,37 @@ $sucursales = $conn->query("SELECT id, nombre FROM sucursales");
     </div>
 
     <script>
-        $(document).ready(function() {
-            $('#agregar_usuario_form').submit(function(event) {
-                event.preventDefault();
-                $.ajax({
-                    type: 'POST',
-                    url: 'crear_usuario.php',
-                    data: $(this).serialize() + '&ajax=true',
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.status === 'success') {
-                            Swal.fire({
-                                title: 'Usuario agregado',
-                                text: response.message,
-                                icon: 'success',
-                                confirmButtonText: 'OK'
-                            }).then(() => {
-                                location.reload();
-                            });
-                        } else {
-                            Swal.fire({
-                                title: 'Error',
-                                text: response.message,
-                                icon: 'error',
-                                confirmButtonText: 'OK'
-                            });
-                        }
-                    }
-                });
-            });
+$(document).ready(function() {
+    $('#agregar_usuario_form').submit(function(event) {
+        event.preventDefault();
+        $.ajax({
+            type: 'POST',
+            url: 'crear_usuario.php',
+            data: $(this).serialize() + '&ajax=true',
+            dataType: 'json',
+            success: function(response) {
+                if (response.status === 'success') {
+                    Swal.fire({
+                        title: 'Usuario agregado',
+                        text: response.message,
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    }).then(() => {
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Error',
+                        text: response.message,
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            }
         });
-    </script>
+    });
+});
+
+</script>
 </body>
 </html>
