@@ -23,7 +23,7 @@ if (isset($_POST['agregar_sucursal'])) {
     // Insertar la nueva sucursal en la base de datos
     $query = "INSERT INTO sucursales (nombre) VALUES ('$nombre')";
     if ($conn->query($query) === TRUE) {
-        echo "Sucursal agregada exitosamente";
+        echo "<script>alert('Sucursal \" . $nombre . \" agregada exitosamente');</script>";
     } else {
         echo "Error: " . $conn->error;
     }
@@ -124,7 +124,7 @@ if (!function_exists('auditoria')) {
                 e.preventDefault();
                 var nombre = $('#nombre').val();
                 $.post('', { agregar_sucursal: true, nombre: nombre }, function(response) {
-                    alert('Sucursal agregada exitosamente');
+                    alert('Sucursal ' + nombre + ' agregada exitosamente');
                     location.reload();
                 }).fail(function() {
                     alert('Error al agregar la sucursal');

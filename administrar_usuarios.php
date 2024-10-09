@@ -31,19 +31,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_user'])) {
 // Manejar la eliminación de usuarios
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_user'])) {
     $id = $_POST['id'];
-    $new_user_id = $_POST['new_usuario_id'];
+    $new_user_id = isset($_POST['new_usuario_id']) ? $_POST['new_usuario_id'] : '';
 
+    // Si se seleccionó un nuevo usuario, reasignar los datos
     if ($new_user_id != '') {
-        // Lógica para reasignar datos al nuevo usuario
+        $reassign_query = "UPDATE some_table SET usuario_id='$new_user_id' WHERE usuario_id='$id'";
+        if (!$conn->query($reassign_query)) {
+            echo "<script>alert('Error al reasignar los datos: " . $conn->error . "');</script>";
+            exit();
+        }
+        auditoria("Datos reasignados del usuario $id al usuario $new_user_id");
     }
 
     // Eliminar el usuario
     $delete_query = "DELETE FROM usuarios WHERE id='$id'";
     if ($conn->query($delete_query) === TRUE) {
         auditoria("Usuario $id eliminado");
-        echo json_encode(['status' => 'success', 'message' => 'Usuario eliminado exitosamente']);
+        echo "<script>alert('Usuario eliminado exitosamente'); window.location.href='administrar_usuarios.php';</script>";
     } else {
-        echo json_encode(['status' => 'error', 'message' => 'Error al eliminar el usuario: ' . $conn->error]);
+        echo "<script>alert('Error al eliminar el usuario: " . $conn->error . "');</script>";
     }
     exit();
 }
@@ -75,7 +81,6 @@ if (!function_exists('auditoria')) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Administrar Usuarios</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body class="bg-gray-100">
     <div class="container mx-auto mt-10">
@@ -128,16 +133,18 @@ if (!function_exists('auditoria')) {
         <div class="bg-white p-6 rounded-lg shadow-lg">
             <h2 class="text-xl font-bold mb-4">Confirmar Eliminación</h2>
             <p class="mb-4">Está a punto de eliminar este usuario. Esto también eliminará toda la información asociada a este usuario. ¿Desea continuar?</p>
-            <input type="hidden" id="deleteUserId">
-            <label for="new_usuario_id" class="block text-gray-700 font-bold mb-2">Reasignar datos a otro usuario (opcional)</label>
-            <select id="new_usuario_id" class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
-                <option value="">Seleccionar usuario</option>
-                <?php foreach ($usuarios_result as $row): ?>
-                    <option value="<?php echo $row['id']; ?>"><?php echo $row['nombre']; ?></option>
-                <?php endforeach; ?>
-            </select>
-            <button class="bg-gray-600 text-white p-2 rounded mr-2" onclick="closeModal()">Cancelar</button>
-            <button class="bg-red-600 text-white p-2 rounded" onclick="eliminarUsuario()">Eliminar</button>
+            <form method="POST">
+                <input type="hidden" id="deleteUserId" name="id">
+                <label for="new_usuario_id" class="block text-gray-700 font-bold mb-2">Reasignar datos a otro usuario (opcional)</label>
+                <select id="new_usuario_id" name="new_usuario_id" class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
+                    <option value="">Seleccionar usuario</option>
+                    <?php foreach ($usuarios_result as $row): ?>
+                        <option value="<?php echo $row['id']; ?>"><?php echo $row['nombre']; ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <button type="button" class="bg-gray-600 text-white p-2 rounded mr-2" onclick="closeModal()">Cancelar</button>
+                <button type="submit" name="delete_user" class="bg-red-600 text-white p-2 rounded">Eliminar</button>
+            </form>
         </div>
     </div>
     <script>
@@ -148,27 +155,6 @@ if (!function_exists('auditoria')) {
 
         function closeModal() {
             document.getElementById('confirmModal').classList.add('hidden');
-        }
-
-        function eliminarUsuario() {
-            var userId = document.getElementById('deleteUserId').value;
-            var newUserId = document.getElementById('new_usuario_id').value;
-
-            $.ajax({
-                type: 'POST',
-                url: 'administrar_usuarios.php',
-                data: { id: userId, new_usuario_id: newUserId, delete_user: true },
-                dataType: 'json',
-                success: function(response) {
-                    alert(response.message);
-                    if (response.status === 'success') {
-                        location.reload();
-                    }
-                },
-                error: function() {
-                    alert('Error al eliminar el usuario');
-                }
-            });
         }
     </script>
 </body>
