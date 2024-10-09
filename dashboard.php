@@ -38,35 +38,6 @@ if ($rol == 'TI' && isset($_POST['sucursal_id']) && is_numeric($_POST['sucursal_
     $sucursal_id = $_SESSION['sucursal_id'];
 }
 
-// Obtener datos de todas las sucursales para TI
-function get_all_data($conn, $date_format, $date_condition, $start_date, $end_date) {
-    $data = [];
-    $sucursales_query = $conn->prepare("SELECT id, nombre FROM sucursales");
-    $sucursales_query->execute();
-    $sucursales = $sucursales_query->get_result();
-
-    while ($sucursal = $sucursales->fetch_assoc()) {
-        $sucursal_id = $sucursal['id'];
-        $sucursal_nombre = $sucursal['nombre'];
-
-        $ventas_result = get_data($conn, 'ventas', $sucursal_id, $date_format, $date_condition, 'monto', $start_date, $end_date);
-        $inventarios_result = get_data($conn, 'inventarios', $sucursal_id, $date_format, $date_condition, 'cantidad', $start_date, $end_date);
-        $gastos_result = get_data($conn, 'gastos', $sucursal_id, $date_format, $date_condition, 'monto', $start_date, $end_date);
-
-        list($ventas_labels, $ventas_data) = process_data($ventas_result);
-        list($inventarios_labels, $inventarios_data) = process_data($inventarios_result);
-        list($gastos_labels, $gastos_data) = process_data($gastos_result);
-
-        $data[] = [
-            'sucursal' => $sucursal_nombre,
-            'ventas' => ['labels' => $ventas_labels, 'data' => $ventas_data],
-            'inventarios' => ['labels' => $inventarios_labels, 'data' => $inventarios_data],
-            'gastos' => ['labels' => $gastos_labels, 'data' => $gastos_data],
-        ];
-    }
-    return $data;
-}
-
 // Obtener el nombre de la sucursal seleccionada
 $query = $conn->prepare("SELECT nombre FROM sucursales WHERE id = ?");
 $query->bind_param('i', $sucursal_id);
@@ -123,7 +94,63 @@ function process_data($result) {
     }
     return [$labels, $data];
 }
+
+// Función para obtener datos de todas las sucursales para TI
+function get_all_data($conn, $date_format, $date_condition, $start_date, $end_date) {
+    $data = [];
+    $sucursales_query = $conn->prepare("SELECT id, nombre FROM sucursales");
+    $sucursales_query->execute();
+    $sucursales = $sucursales_query->get_result();
+
+    while ($sucursal = $sucursales->fetch_assoc()) {
+        $sucursal_id = $sucursal['id'];
+        $sucursal_nombre = $sucursal['nombre'];
+
+        $ventas_result = get_data($conn, 'ventas', $sucursal_id, $date_format, $date_condition, 'monto', $start_date, $end_date);
+        $inventarios_result = get_data($conn, 'inventarios', $sucursal_id, $date_format, $date_condition, 'cantidad', $start_date, $end_date);
+        $gastos_result = get_data($conn, 'gastos', $sucursal_id, $date_format, $date_condition, 'monto', $start_date, $end_date);
+
+        list($ventas_labels, $ventas_data) = process_data($ventas_result);
+        list($inventarios_labels, $inventarios_data) = process_data($inventarios_result);
+        list($gastos_labels, $gastos_data) = process_data($gastos_result);
+
+        $data[] = [
+            'sucursal' => $sucursal_nombre,
+            'ventas' => ['labels' => $ventas_labels, 'data' => $ventas_data],
+            'inventarios' => ['labels' => $inventarios_labels, 'data' => $inventarios_data],
+            'gastos' => ['labels' => $gastos_labels, 'data' => $gastos_data],
+        ];
+    }
+    return $data;
+}
+
+// Obtener datos según el rol del usuario
+$data = [];
+
+if ($rol == 'TI') {
+    $data = get_all_data($conn, $date_format, $date_condition, $start_date, $end_date);
+} else {
+    // Función para obtener y procesar los datos de una tabla específica
+    function get_processed_data($conn, $sucursal_id, $date_format, $date_condition, $start_date, $end_date, $table, $column) {
+        $result = get_data($conn, $table, $sucursal_id, $date_format, $date_condition, $column, $start_date, $end_date);
+        return process_data($result);
+    }
+
+    // Obtener y procesar datos
+    list($ventas_labels, $ventas_data) = get_processed_data($conn, $sucursal_id, $date_format, $date_condition, $start_date, $end_date, 'ventas', 'monto');
+    list($inventarios_labels, $inventarios_data) = get_processed_data($conn, $sucursal_id, $date_format, $date_condition, $start_date, $end_date, 'inventarios', 'cantidad');
+    list($gastos_labels, $gastos_data) = get_processed_data($conn, $sucursal_id, $date_format, $date_condition, $start_date, $end_date, 'gastos', 'monto');
+
+    $data[] = [
+        'sucursal' => $sucursal['nombre'],
+        'ventas' => ['labels' => $ventas_labels, 'data' => $ventas_data],
+        'inventarios' => ['labels' => $inventarios_labels, 'data' => $inventarios_data],
+        'gastos' => ['labels' => $gastos_labels, 'data' => $gastos_data],
+    ];
+}
 ?>
+
+
 
 <!DOCTYPE html>
 <html lang="es">
@@ -176,7 +203,6 @@ function process_data($result) {
 
             <!-- Gráficos -->
             <?php
-            $data = get_all_data($conn, $date_format, $date_condition, $start_date, $end_date);
             $chartCount = 0;
             foreach ($data as $item) {
                 $chartCount++;
