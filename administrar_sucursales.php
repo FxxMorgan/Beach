@@ -16,9 +16,10 @@ if ($_SESSION['rol'] != 'jefe' && $_SESSION['rol'] != 'TI') {
 $sucursales_query = "SELECT * FROM sucursales";
 $sucursales_result = $conn->query($sucursales_query);
 
+// Manejar la adición de sucursales
 if (isset($_POST['agregar_sucursal'])) {
     $nombre = $_POST['nombre'];
-    
+
     // Insertar la nueva sucursal en la base de datos
     $query = "INSERT INTO sucursales (nombre) VALUES ('$nombre')";
     if ($conn->query($query) === TRUE) {
@@ -28,10 +29,11 @@ if (isset($_POST['agregar_sucursal'])) {
     }
 }
 
-if (isset($_POST['editar_sucursal'])) {
+// Manejar la actualización de sucursales
+if (isset($_POST['actualizar_sucursal'])) {
     $id = $_POST['id'];
     $nombre = $_POST['nombre'];
-    
+
     // Actualizar la sucursal en la base de datos
     $query = "UPDATE sucursales SET nombre='$nombre' WHERE id='$id'";
     if ($conn->query($query) === TRUE) {
@@ -41,9 +43,10 @@ if (isset($_POST['editar_sucursal'])) {
     }
 }
 
+// Manejar la eliminación de sucursales
 if (isset($_POST['eliminar_sucursal'])) {
     $id = $_POST['id'];
-    
+
     // Eliminar la sucursal de la base de datos
     $query = "DELETE FROM sucursales WHERE id='$id'";
     if ($conn->query($query) === TRUE) {
@@ -52,7 +55,17 @@ if (isset($_POST['eliminar_sucursal'])) {
         echo "Error: " . $conn->error;
     }
 }
+
+if (!function_exists('auditoria')) {
+    function auditoria($accion) {
+        global $conn;
+        $usuario = $_SESSION['usuario'];
+        $query = "INSERT INTO auditoria (usuario, accion) VALUES ('$usuario', '$accion')";
+        $conn->query($query);
+    }
+}
 ?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
