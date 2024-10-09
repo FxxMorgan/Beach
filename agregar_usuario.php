@@ -1,19 +1,26 @@
 <?php
 session_start();
-$conn = new mysqli('localhost', 'root', '', 'beach');
+if (!isset($_SESSION['usuario_id']) || !isset($_SESSION['rol']) || ($_SESSION['rol'] != 'jefe' && $_SESSION['rol'] != 'TI')) {
+    header('Location: login.php');
+    exit();
+}
 
+$conn = new mysqli('localhost', 'root', '', 'beach');
 if ($conn->connect_error) {
     die("Error de conexión: " . $conn->connect_error);
 }
 
-// Verificar si el usuario es jefe
-if ($_SESSION['rol'] != 'jefe') {
-    header('Location: dashboard.php');
-    exit();
-}
+// Ajustar zona horaria
+date_default_timezone_set('America/Santiago');
 
-// Obtener las sucursales para mostrarlas en el formulario
-$sucursales = $conn->query("SELECT id, nombre FROM sucursales");
+// Función de auditoría
+function auditoria($conn, $accion, $usuario_id) {
+    $fecha = date('Y-m-d H:i:s');
+    $usuario_nombre = $_SESSION['usuario'];
+
+    $query = "INSERT INTO auditoria (usuario_id, usuario_nombre, accion, fecha) VALUES ('$usuario_id', '$usuario_nombre', '$accion', '$fecha')";
+    $conn->query($query);
+}
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['ajax'])) {
     $nombre = $_POST['nombre'];
@@ -21,6 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['ajax'])) {
     $password = password_hash($_POST['password'], PASSWORD_DEFAULT);  // Hash de la contraseña
     $rol = $_POST['rol'];
     $sucursal_id = $_POST['sucursal_id'];
+    $usuario_id = $_SESSION['usuario_id'];
 
     // Verificar si el 'jefe' selecciona su propia sucursal
     if ($_SESSION['rol'] == 'jefe' && $_SESSION['sucursal_id'] != $sucursal_id) {
@@ -32,12 +40,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['ajax'])) {
     $query = "INSERT INTO usuarios (nombre, email, contraseña, rol, sucursal_id) 
               VALUES ('$nombre', '$email', '$password', '$rol', '$sucursal_id')";
     if ($conn->query($query) === TRUE) {
+        auditoria($conn, "Usuario agregado: $nombre ($email), Rol: $rol, Sucursal ID: $sucursal_id", $usuario_id);
         echo json_encode(['status' => 'success', 'message' => 'Usuario agregado exitosamente']);
     } else {
         echo json_encode(['status' => 'error', 'message' => 'Error: ' . $conn->error]);
     }
     exit();
 }
+
+// Obtener las sucursales para mostrarlas en el formulario
+$sucursales = $conn->query("SELECT id, nombre FROM sucursales");
 ?>
 
 <!DOCTYPE html>
@@ -48,6 +60,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['ajax'])) {
     <title>Agregar Usuario</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Incluir SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="bg-gray-100">
     <div class="container mx-auto mt-10">
@@ -83,6 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['ajax'])) {
 
                 <button type="submit" class="w-full bg-green-600 text-white p-3 rounded-lg font-bold hover:bg-green-700">Agregar Usuario</button>
             </form>
+            <a href="dashboard.php" class="block mt-4 text-center text-blue-500 hover:underline">Volver al Dashboard</a>
         </div>
     </div>
 
@@ -92,13 +107,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['ajax'])) {
                 event.preventDefault();
                 $.ajax({
                     type: 'POST',
-                    url: 'agregar_usuario.php',
+                    url: 'crear_usuario.php',
                     data: $(this).serialize() + '&ajax=true',
                     dataType: 'json',
                     success: function(response) {
-                        alert(response.message);
                         if (response.status === 'success') {
-                            location.reload();
+                            Swal.fire({
+                                title: 'Usuario agregado',
+                                text: response.message,
+                                icon: 'success',
+                                confirmButtonText: 'OK'
+                            }).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                title: 'Error',
+                                text: response.message,
+                                icon: 'error',
+                                confirmButtonText: 'OK'
+                            });
                         }
                     }
                 });

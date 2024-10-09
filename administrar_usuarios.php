@@ -12,6 +12,16 @@ if ($_SESSION['rol'] != 'TI' && $_SESSION['rol'] != 'jefe') {
     exit();
 }
 
+// Definir la función auditoria
+if (!function_exists('auditoria')) {
+    function auditoria($accion) {
+        global $conn;
+        $usuario = $_SESSION['usuario'];
+        $query = "INSERT INTO auditoria (usuario, accion) VALUES ('$usuario', '$accion')";
+        $conn->query($query);
+    }
+}
+
 // Manejar la actualización de usuarios
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_user'])) {
     $id = $_POST['id'];
@@ -33,13 +43,36 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_user'])) {
     $id = $_POST['id'];
     $new_user_id = isset($_POST['new_usuario_id']) ? $_POST['new_usuario_id'] : '';
 
-    // Si se seleccionó un nuevo usuario, reasignar los datos
+    // Si se seleccionó un nuevo usuario, reasignar los datos en las tablas correspondientes
     if ($new_user_id != '') {
-        $reassign_query = "UPDATE some_table SET usuario_id='$new_user_id' WHERE usuario_id='$id'";
-        if (!$conn->query($reassign_query)) {
-            echo "<script>alert('Error al reasignar los datos: " . $conn->error . "');</script>";
+        // Reasignar datos en la tabla 'facturas'
+        $reassign_facturas = "UPDATE facturas SET usuario_id='$new_user_id' WHERE usuario_id='$id'";
+        if (!$conn->query($reassign_facturas)) {
+            echo "<script>alert('Error al reasignar datos en facturas: " . $conn->error . "');</script>";
             exit();
         }
+
+        // Reasignar datos en la tabla 'gastos'
+        $reassign_gastos = "UPDATE gastos SET usuario_id='$new_user_id' WHERE usuario_id='$id'";
+        if (!$conn->query($reassign_gastos)) {
+            echo "<script>alert('Error al reasignar datos en gastos: " . $conn->error . "');</script>";
+            exit();
+        }
+
+        // Reasignar datos en la tabla 'inventarios'
+        $reassign_inventarios = "UPDATE inventarios SET usuario_id='$new_user_id' WHERE usuario_id='$id'";
+        if (!$conn->query($reassign_inventarios)) {
+            echo "<script>alert('Error al reasignar datos en inventarios: " . $conn->error . "');</script>";
+            exit();
+        }
+
+        // Reasignar datos en la tabla 'ventas'
+        $reassign_ventas = "UPDATE ventas SET usuario_id='$new_user_id' WHERE usuario_id='$id'";
+        if (!$conn->query($reassign_ventas)) {
+            echo "<script>alert('Error al reasignar datos en ventas: " . $conn->error . "');</script>";
+            exit();
+        }
+
         auditoria("Datos reasignados del usuario $id al usuario $new_user_id");
     }
 

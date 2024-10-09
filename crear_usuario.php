@@ -60,6 +60,8 @@ $sucursales = $conn->query("SELECT id, nombre FROM sucursales");
     <title>Agregar Usuario</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Incluir SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="bg-gray-100">
     <div class="container mx-auto mt-10">
@@ -109,9 +111,22 @@ $sucursales = $conn->query("SELECT id, nombre FROM sucursales");
                     data: $(this).serialize() + '&ajax=true',
                     dataType: 'json',
                     success: function(response) {
-                        alert(response.message);
                         if (response.status === 'success') {
-                            location.reload();
+                            Swal.fire({
+                                title: 'Usuario agregado',
+                                text: response.message,
+                                icon: 'success',
+                                confirmButtonText: 'OK'
+                            }).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                title: 'Error',
+                                text: response.message,
+                                icon: 'error',
+                                confirmButtonText: 'OK'
+                            });
                         }
                     }
                 });
