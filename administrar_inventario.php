@@ -25,8 +25,15 @@ if (empty($sku) || empty($tipo) || $cantidad <= 0) {
     exit();
 }
 
+// Verificar existencia del archivo JSON
+$productosFile = 'productos.json';
+if (!file_exists($productosFile)) {
+    echo json_encode(['status' => 'error', 'message' => 'Archivo productos.json no encontrado']);
+    exit();
+}
+
 // Leer productos desde el archivo JSON
-$productosData = json_decode(file_get_contents('productos.json'), true);
+$productosData = json_decode(file_get_contents($productosFile), true);
 if (json_last_error() !== JSON_ERROR_NONE) {
     echo json_encode(['status' => 'error', 'message' => 'Error al leer el archivo JSON']);
     exit();
@@ -52,7 +59,7 @@ $query->bind_param("sissii", $descripcion, $cantidad, $tipo, $fecha, $usuario_id
 if ($query->execute()) {
     echo json_encode(['status' => 'success', 'message' => 'Registro agregado correctamente']);
 } else {
-    echo json_encode(['status' => 'error', 'message' => $query->error]);
+    echo json_encode(['status' => 'error', 'message' => $query->error ?? 'Error al agregar el registro']);
 }
 
 // Cerrar conexión

@@ -44,7 +44,7 @@ while ($row = $inventarios_result->fetch_assoc()) {
 }
 ?>
 
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -121,11 +121,11 @@ while ($row = $inventarios_result->fetch_assoc()) {
     </div>
 
     <script>
-    var notyf = new Notyf();
-
     $(document).ready(function() {
-        // Inicializar DataTable con configuración en español
-        $('#inventariosTable').DataTable({
+        var notyf = new Notyf();
+
+        // Inicializar DataTable
+        var table = $('#inventariosTable').DataTable({
             "language": {
                 "lengthMenu": "Mostrar _MENU_ registros por página",
                 "zeroRecords": "No se encontraron resultados",
@@ -139,7 +139,10 @@ while ($row = $inventarios_result->fetch_assoc()) {
                     "next": "Siguiente",
                     "previous": "Anterior"
                 }
-            }
+            },
+            "processing": true,
+            "serverSide": true,
+            "ajax": "administrar_inventario.php" // Aquí se carga la data desde el servidor
         });
 
         // Inicializar el gráfico de inventarios
@@ -184,21 +187,32 @@ while ($row = $inventarios_result->fetch_assoc()) {
             }
         });
 
-        // Agregar registro de inventario
+        // Manejo del formulario
         $('#inventarioForm').on('submit', function(e) {
             e.preventDefault();
             var formData = $(this).serialize();
 
-            $.post('administrar_inventario.php', formData, function(response) {
-                if (response.status === 'success') {
-                    notyf.success('Registro agregado correctamente');
-                    // Actualizar la tabla sin recargar la página
-                    $('#inventariosTable').DataTable().ajax.reload();
-                } else {
-                    notyf.error(response.message);
+            $.ajax({
+                url: 'administrar_inventario.php',
+                type: 'POST',
+                data: formData,
+                dataType: 'json', // Asegura que la respuesta sea tratada como JSON
+                success: function(response) {
+                    console.log(response); // Log de la respuesta completa
+                    if (response.status === 'success') {
+                        notyf.success(response.message || 'Registro agregado correctamente');
+                        
+                        // Recargar la tabla usando ajax.reload() para obtener los datos más recientes
+                        table.ajax.reload(null, false); // El segundo parámetro 'false' mantiene la paginación actual
+                    } else {
+                        console.log(response.message); // Log del mensaje de error
+                        notyf.error(response.message || 'Error al agregar el registro');
+                    }
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                    console.log('Error:', textStatus, errorThrown); // Log del error
+                    notyf.error('Hubo un error al agregar el registro');
                 }
-            }).fail(function() {
-                notyf.error('Hubo un error al agregar el registro');
             });
         });
     });
