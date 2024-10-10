@@ -52,10 +52,11 @@ while ($row = $inventarios_result->fetch_assoc()) {
     <title>Ver Inventarios</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3.1.0/notyf.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/notyf@3.1.0/notyf.min.js"></script>
     <style>
         .chart-container {
             position: relative;
@@ -120,6 +121,8 @@ while ($row = $inventarios_result->fetch_assoc()) {
     </div>
 
     <script>
+    var notyf = new Notyf();
+
     $(document).ready(function() {
         // Inicializar DataTable con configuración en español
         $('#inventariosTable').DataTable({
@@ -173,21 +176,9 @@ while ($row = $inventarios_result->fetch_assoc()) {
                         return item.sku === sku;
                     });
                     if (producto) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Producto encontrado',
-                            text: 'Nombre: ' + producto.nombre,
-                            timer: 1000, // Temporizador de 1 segundo
-                            showConfirmButton: false
-                        });
+                        notyf.success('Nombre: ' + producto.nombre);
                     } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: 'Producto no encontrado',
-                            timer: 1000,
-                            showConfirmButton: false
-                        });
+                        notyf.error('Producto no encontrado');
                     }
                 });
             }
@@ -200,19 +191,18 @@ while ($row = $inventarios_result->fetch_assoc()) {
 
             $.post('administrar_inventario.php', formData, function(response) {
                 if (response.status === 'success') {
-                    Swal.fire('Éxito', 'Registro agregado correctamente', 'success').then(function() {
-                        // Actualizar tabla sin recargar la página
-                        $('#inventariosTable').DataTable().ajax.reload();
-                    });
+                    notyf.success('Registro agregado correctamente');
+                    // Actualizar la tabla sin recargar la página
+                    $('#inventariosTable').DataTable().ajax.reload();
                 } else {
-                    Swal.fire('Error', response.message, 'error');
+                    notyf.error(response.message);
                 }
             }).fail(function() {
-                Swal.fire('Error', 'Hubo un error al agregar el registro', 'error');
+                notyf.error('Hubo un error al agregar el registro');
             });
         });
     });
-</script>
+    </script>
 
 </body>
 </html>

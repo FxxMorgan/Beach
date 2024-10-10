@@ -50,7 +50,7 @@ $query = $conn->prepare("INSERT INTO inventarios (descripcion, cantidad, tipo, f
 $query->bind_param("sissii", $descripcion, $cantidad, $tipo, $fecha, $usuario_id, $sucursal_id);
 
 if ($query->execute()) {
-    echo json_encode(['status' => 'success']);
+    echo json_encode(['status' => 'success', 'message' => 'Registro agregado correctamente']);
 } else {
     echo json_encode(['status' => 'error', 'message' => $query->error]);
 }
