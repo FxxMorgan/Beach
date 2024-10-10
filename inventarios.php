@@ -14,6 +14,16 @@ $usuario_id = $_SESSION['usuario_id'];
 $sucursal_id = $_GET['sucursal_id'] ?? $_SESSION['sucursal_id'];
 $rol = $_SESSION['rol'];
 
+
+// Obtener el nombre de la sucursal desde la base de datos
+$sucursal_query = "SELECT nombre FROM sucursales WHERE id='$sucursal_id'";
+$sucursal_result = $conn->query($sucursal_query);
+$sucursal_nombre = '';
+if ($sucursal_result->num_rows > 0) {
+    $sucursal_row = $sucursal_result->fetch_assoc();
+    $sucursal_nombre = $sucursal_row['nombre'];
+}
+
 // Verificar acceso a la sucursal
 if ($rol != 'TI' && $sucursal_id != $_SESSION['sucursal_id']) {
     echo "No tienes permisos para acceder a esta sucursal.";
@@ -22,6 +32,16 @@ if ($rol != 'TI' && $sucursal_id != $_SESSION['sucursal_id']) {
 
 $query = "SELECT * FROM inventarios WHERE sucursal_id='$sucursal_id'";
 $result = $conn->query($query);
+
+// Obtener datos para el gráfico
+$inventarios_query = "SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes, SUM(cantidad) AS total FROM inventarios WHERE sucursal_id='$sucursal_id' GROUP BY mes";
+$inventarios_result = $conn->query($inventarios_query);
+$inventarios_data = [];
+$inventarios_labels = [];
+while ($row = $inventarios_result->fetch_assoc()) {
+    $inventarios_labels[] = $row['mes'];
+    $inventarios_data[] = $row['total'];
+}
 ?>
 
 <!DOCTYPE html>
@@ -31,39 +51,168 @@ $result = $conn->query($query);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ver Inventarios</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <style>
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+        }
+    </style>
 </head>
-
-<div class="mt-6">
-                <a href="dashboard.php" class="w-full bg-gray-600 text-white p-3 rounded-lg font-bold hover:bg-gray-700 inline-block text-center">Volver al Dashboard</a>
-            </div>
-            
 <body class="bg-gray-100">
     <div class="container mx-auto mt-10">
-        <h1 class="text-3xl font-bold text-center mb-5">Inventarios - Sucursal: <?php echo $sucursal_id; ?></h1>
+        <h1 class="text-3xl font-bold text-center mb-5">Inventarios - Sucursal: <?php echo $sucursal_nombre; ?></h1>
         <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md">
-            <table class="min-w-full table-auto">
+            <form id="inventarioForm" method="POST" class="mb-6">
+                <div class="mb-4">
+                    <label for="sku" class="block text-gray-700 font-bold mb-2">SKU</label>
+                    <input type="text" id="sku" name="sku" required class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Ingrese SKU">
+                </div>
+                <div class="mb-4">
+                    <label for="tipo" class="block text-gray-700 font-bold mb-2">Tipo</label>
+                    <select id="tipo" name="tipo" required class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="ingreso">Ingreso</option>
+                        <option value="retiro">Retiro</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label for="cantidad" class="block text-gray-700 font-bold mb-2">Cantidad</label>
+                    <input type="number" id="cantidad" name="cantidad" required class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Ingrese Cantidad">
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Agregar Registro</button>
+            </form>
+            <div class="chart-container mx-auto mb-6">
+                <canvas id="inventariosChart"></canvas>
+            </div>
+            <table id="inventariosTable" class="display">
                 <thead>
-                    <tr class="bg-indigo-600 text-white">
-                        <th class="py-2 px-4 text-left">ID</th>
-                        <th class="py-2 px-4 text-left">Descripción</th>
-                        <th class="py-2 px-4 text-left">Cantidad</th>
-                        <th class="py-2 px-4 text-left">Fecha</th>
-                        <th class="py-2 px-4 text-left">Usuario ID</th>
+                    <tr>
+                        <th>ID</th>
+                        <th>Descripción</th>
+                        <th>Cantidad</th>
+                        <th>Tipo</th>
+                        <th>Fecha</th>
+                        <th>Usuario ID</th>
                     </tr>
                 </thead>
-                <tbody class="bg-gray-100">
+                <tbody>
                     <?php while ($row = $result->fetch_assoc()): ?>
-                    <tr class="border-b">
-                        <td class="py-2 px-4"><?php echo $row['id']; ?></td>
-                        <td class="py-2 px-4"><?php echo $row['descripcion']; ?></td>
-                        <td class="py-2 px-4"><?php echo $row['cantidad']; ?></td>
-                        <td class="py-2 px-4"><?php echo $row['fecha']; ?></td>
-                        <td class="py-2 px-4"><?php echo $row['usuario_id']; ?></td>
-                    </tr>
+                        <tr>
+                            <td><?php echo $row['id']; ?></td>
+                            <td><?php echo $row['descripcion']; ?></td>
+                            <td><?php echo $row['cantidad']; ?></td>
+                            <td><?php echo $row['tipo']; ?></td>
+                            <td><?php echo $row['fecha']; ?></td>
+                            <td><?php echo $row['usuario_id']; ?></td>
+                        </tr>
                     <?php endwhile; ?>
                 </tbody>
             </table>
+            <div class="mt-6">
+                <a href="dashboard.php" class="w-full bg-gray-600 text-white p-3 rounded-lg font-bold hover:bg-gray-700 inline-block text-center">Volver al Dashboard</a>
+            </div>
         </div>
     </div>
+
+    <script>
+    $(document).ready(function() {
+        // Inicializar DataTable con configuración en español
+        $('#inventariosTable').DataTable({
+            "language": {
+                "lengthMenu": "Mostrar _MENU_ registros por página",
+                "zeroRecords": "No se encontraron resultados",
+                "info": "Mostrando página _PAGE_ de _PAGES_",
+                "infoEmpty": "No hay registros disponibles",
+                "infoFiltered": "(filtrado de _MAX_ registros en total)",
+                "search": "Buscar:",
+                "paginate": {
+                    "first": "Primero",
+                    "last": "Último",
+                    "next": "Siguiente",
+                    "previous": "Anterior"
+                }
+            }
+        });
+
+        // Inicializar el gráfico de inventarios
+        var ctxInventarios = document.getElementById('inventariosChart').getContext('2d');
+        var inventariosChart = new Chart(ctxInventarios, {
+            type: 'bar',
+            data: {
+                labels: <?php echo json_encode($inventarios_labels); ?>,
+                datasets: [{
+                    label: 'Inventarios',
+                    data: <?php echo json_encode($inventarios_data); ?>,
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Búsqueda por SKU
+        $('#sku').on('input', function() {
+            var sku = $(this).val();
+            if (sku.length === 13) { // Asume que el SKU tiene 13 caracteres
+                $.getJSON('productos.json', function(data) {
+                    var producto = data.find(function(item) {
+                        return item.sku === sku;
+                    });
+                    if (producto) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Producto encontrado',
+                            text: 'Nombre: ' + producto.nombre,
+                            timer: 1000, // Temporizador de 1 segundo
+                            showConfirmButton: false
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Producto no encontrado',
+                            timer: 1000,
+                            showConfirmButton: false
+                        });
+                    }
+                });
+            }
+        });
+
+        // Agregar registro de inventario
+        $('#inventarioForm').on('submit', function(e) {
+            e.preventDefault();
+            var formData = $(this).serialize();
+
+            $.post('administrar_inventario.php', formData, function(response) {
+                if (response.status === 'success') {
+                    Swal.fire('Éxito', 'Registro agregado correctamente', 'success').then(function() {
+                        // Actualizar tabla sin recargar la página
+                        $('#inventariosTable').DataTable().ajax.reload();
+                    });
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            }).fail(function() {
+                Swal.fire('Error', 'Hubo un error al agregar el registro', 'error');
+            });
+        });
+    });
+</script>
+
 </body>
 </html>

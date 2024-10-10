@@ -74,10 +74,10 @@ switch ($time_range) {
 // Función para obtener datos de la base de datos
 function get_data($conn, $table, $sucursal_id, $date_format, $date_condition, $column, $start_date = null, $end_date = null) {
     if ($date_condition) {
-        $query = $conn->prepare("SELECT DATE_FORMAT(fecha, '$date_format') AS periodo, SUM($column) AS total FROM $table WHERE sucursal_id = ? $date_condition GROUP BY periodo");
+        $query = $conn->prepare("SELECT DATE_FORMAT(fecha, '$date_format') AS periodo, SUM($column) AS total FROM $table WHERE sucursal_id = ? $date_condition GROUP BY periodo ORDER BY fecha ASC");
         $query->bind_param('iss', $sucursal_id, $start_date, $end_date);
     } else {
-        $query = $conn->prepare("SELECT DATE_FORMAT(fecha, '$date_format') AS periodo, SUM($column) AS total FROM $table WHERE sucursal_id = ? GROUP BY periodo");
+        $query = $conn->prepare("SELECT DATE_FORMAT(fecha, '$date_format') AS periodo, SUM($column) AS total FROM $table WHERE sucursal_id = ? GROUP BY periodo ORDER BY fecha ASC");
         $query->bind_param('i', $sucursal_id);
     }
     $query->execute();

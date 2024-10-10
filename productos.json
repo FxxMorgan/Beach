@@ -1,21 +1,21 @@
 [
     {
-      "sku": "12345",
+      "sku": "1234567890123",
       "nombre": "Producto A",
       "precio": 10000,
       "descripcion": "Descripción del Producto A"
     },
     {
-      "sku": "67890",
+      "sku": "1234567890123",
       "nombre": "Producto B",
       "precio": 15000,
       "descripcion": "Descripción del Producto B"
     },
     {
-      "sku": "11223",
-      "nombre": "Producto C",
-      "precio": 20000,
-      "descripcion": "Descripción del Producto C"
+      "sku": "7802820250244",
+      "nombre": "Kapo Sabor Manzana",
+      "precio": 300,
+      "descripcion": "Capo sabor manzana 252ml"
     }
   ]
   

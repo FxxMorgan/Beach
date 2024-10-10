@@ -11,7 +11,6 @@ if ($conn->connect_error) {
     die("Error de conexión: " . $conn->connect_error);
 }
 
-// Ajustar la zona horaria a la hora local (por ejemplo, 'America/Santiago' para Chile)
 date_default_timezone_set('America/Santiago');
 
 $sucursal_id = $_GET['sucursal_id'] ?? $_SESSION['sucursal_id'];
@@ -19,13 +18,10 @@ $sucursal_id = $_GET['sucursal_id'] ?? $_SESSION['sucursal_id'];
 // Función de auditoría
 function auditoria($conn, $accion, $usuario_id) {
     $fecha = date('Y-m-d H:i:s');
-
-    // Obtener el nombre del usuario
     $usuario_query = "SELECT nombre FROM usuarios WHERE id='$usuario_id'";
     $usuario_result = $conn->query($usuario_query);
     $usuario = $usuario_result->fetch_assoc();
     $usuario_nombre = $usuario['nombre'];
-
     $query = "INSERT INTO auditoria (usuario_id, usuario_nombre, accion, fecha) VALUES ('$usuario_id', '$usuario_nombre', '$accion', '$fecha')";
     $conn->query($query);
 }
@@ -33,16 +29,12 @@ function auditoria($conn, $accion, $usuario_id) {
 // Procesar formulario de nuevo gasto
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $tipo = $_POST['tipo'];
-    $monto = str_replace(['.', ','], '', $_POST['monto']); // Eliminar puntos y comas para convertir a entero
+    $monto = str_replace(['.', ','], '', $_POST['monto']);
     $fecha = date('Y-m-d');
     $usuario_id = $_SESSION['usuario_id'];
-
-    // Insertar el gasto en la base de datos
     $query = "INSERT INTO gastos (tipo, monto, fecha, sucursal_id) VALUES ('$tipo', '$monto', '$fecha', '$sucursal_id')";
     if ($conn->query($query) === TRUE) {
         auditoria($conn, "Gasto agregado: Tipo: $tipo, Monto: $monto, Fecha: $fecha, Sucursal ID: $sucursal_id", $usuario_id);
-
-        // Coloca la alerta antes del HTML
         echo "<script>
                 Swal.fire({
                     title: 'Monto registrado correctamente',
@@ -53,9 +45,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     cancelButtonText: 'No'
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        window.location.reload(); // Recarga la página para agregar más gastos
+                        window.location.reload();
                     } else {
-                        window.location.href = 'dashboard.php'; // Redirige al dashboard
+                        window.location.href = 'dashboard.php';
                     }
                 });
               </script>";
@@ -67,7 +59,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 $query = "SELECT * FROM gastos WHERE sucursal_id='$sucursal_id'";
 $result = $conn->query($query);
 
-// Obtener datos para el gráfico
 $gastos_query = "SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes, SUM(monto) AS total FROM gastos WHERE sucursal_id='$sucursal_id' GROUP BY mes";
 $gastos_result = $conn->query($gastos_query);
 $gastos_data = [];
@@ -85,13 +76,16 @@ while ($row = $gastos_result->fetch_assoc()) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ver Gastos</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <style>
         .chart-container {
             position: relative;
-            height: 200px;
-            width: 200px;
+            height: 400px;
+            width: 100%;
         }
     </style>
 </head>
@@ -118,28 +112,37 @@ while ($row = $gastos_result->fetch_assoc()) {
             <div class="chart-container mx-auto mb-6">
                 <canvas id="gastosChart"></canvas>
             </div>
-            <div class="mb-4 font-bold text-lg flex justify-between">
-                <div>ID</div>
-                <div>Descripción</div>
-                <div>Monto</div>
-                <div>Fecha</div>
-            </div>
-            <?php while ($row = $result->fetch_assoc()): ?>
-                <div class="gasto-item p-4 bg-white border rounded-lg shadow mb-4 flex justify-between">
-                    <div><?php echo $row['id']; ?></div>
-                    <div><?php echo isset($row['tipo']) ? $row['tipo'] : 'N/A'; ?></div>
-                    <div><?php echo "$" . number_format($row['monto'], 0, '', '.'); ?></div>
-                    <div><?php echo $row['fecha']; ?></div>
-                </div>
-            <?php endwhile; ?>
+            <table id="gastosTable" class="display">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Descripción</th>
+                        <th>Monto</th>
+                        <th>Fecha</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php while ($row = $result->fetch_assoc()): ?>
+                        <tr>
+                            <td><?php echo $row['id']; ?></td>
+                            <td><?php echo isset($row['tipo']) ? $row['tipo'] : 'N/A'; ?></td>
+                            <td><?php echo "$" . number_format($row['monto'], 0, '', '.'); ?></td>
+                            <td><?php echo $row['fecha']; ?></td>
+                        </tr>
+                    <?php endwhile; ?>
+                </tbody>
+            </table>
             <div class="mt-6">
                 <a href="dashboard.php" class="w-full bg-gray-600 text-white p-3 rounded-lg font-bold hover:bg-gray-700 inline-block text-center">Volver al Dashboard</a>
             </div>
         </div>
     </div>
 
-    <!-- Chart.js Script -->
     <script>
+        $(document).ready(function() {
+            $('#gastosTable').DataTable();
+        });
+
         var ctxGastos = document.getElementById('gastosChart').getContext('2d');
         var gastosChart = new Chart(ctxGastos, {
             type: 'line',

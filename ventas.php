@@ -11,7 +11,6 @@ if ($conn->connect_error) {
     die("Error de conexión: " . $conn->connect_error);
 }
 
-// Ajustar la zona horaria a la hora local (por ejemplo, 'America/Santiago' para Chile)
 date_default_timezone_set('America/Santiago');
 
 $sucursal_id = $_GET['sucursal_id'] ?? $_SESSION['sucursal_id'];
@@ -25,38 +24,19 @@ $sucursal = $sucursal_result->fetch_assoc();
 // Función de auditoría
 function auditoria($conn, $accion, $usuario_id) {
     $fecha = date('Y-m-d H:i:s');
-
-    // Obtener el nombre del usuario
     $usuario_query = "SELECT nombre FROM usuarios WHERE id='$usuario_id'";
     $usuario_result = $conn->query($usuario_query);
-
-    // Depuración
-    if ($usuario_result) {
-        echo "Usuario query ejecutado correctamente.<br>";
-    } else {
-        echo "Error en usuario query: " . $conn->error . "<br>";
-    }
-
     $usuario = $usuario_result->fetch_assoc();
     $usuario_nombre = $usuario['nombre'];
-
-    // Depuración
-    echo "Usuario ID: $usuario_id, Nombre: $usuario_nombre<br>";
-
     $query = "INSERT INTO auditoria (usuario_id, usuario_nombre, accion, fecha) VALUES ('$usuario_id', '$usuario_nombre', '$accion', '$fecha')";
-    if ($conn->query($query) === TRUE) {
-        echo "Auditoría registrada correctamente.<br>";
-    } else {
-        echo "Error en auditoría: " . $conn->error . "<br>";
-    }
+    $conn->query($query);
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $monto = str_replace('.', '', $_POST['monto']); // Eliminar puntos para convertir a entero
+    $monto = str_replace('.', '', $_POST['monto']);
     $comentario = $_POST['comentario'];
     $fecha = date('Y-m-d H:i:s');
     $usuario_id = $_SESSION['usuario_id'];
-
     $insert_query = "INSERT INTO ventas (fecha, monto, usuario_id, sucursal_id, comentario) VALUES ('$fecha', '$monto', '$usuario_id', '$sucursal_id', '$comentario')";
     if ($conn->query($insert_query) === TRUE) {
         auditoria($conn, "Venta registrada: Monto: $monto, Comentario: $comentario, Fecha: $fecha, Sucursal ID: $sucursal_id", $usuario_id);
@@ -69,6 +49,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 // Obtener ventas y nombres de usuarios
 $query = "SELECT v.*, u.nombre as usuario_nombre FROM ventas v JOIN usuarios u ON v.usuario_id = u.id WHERE v.sucursal_id='$sucursal_id'";
 $result = $conn->query($query);
+
+// Obtener datos para el gráfico
+$ventas_query = "SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes, SUM(monto) AS total FROM ventas WHERE sucursal_id='$sucursal_id' GROUP BY mes";
+$ventas_result = $conn->query($ventas_query);
+$ventas_data = [];
+$ventas_labels = [];
+while ($row = $ventas_result->fetch_assoc()) {
+    $ventas_labels[] = $row['mes'];
+    $ventas_data[] = $row['total'];
+}
 ?>
 
 <!DOCTYPE html>
@@ -78,13 +68,18 @@ $result = $conn->query($query);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ver Ventas</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            <?php if ($success_message): ?>
-            alert("<?php echo $success_message; ?>");
-            <?php endif; ?>
-        });
-    </script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <style>
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+        }
+    </style>
 </head>
 <body class="bg-gray-100">
     <div class="container mx-auto mt-10">
@@ -105,27 +100,30 @@ $result = $conn->query($query);
                 </div>
                 <button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Registrar Venta</button>
             </form>
-            <table class="min-w-full bg-white">
+            <div class="chart-container mx-auto mb-6">
+                <canvas id="ventasChart"></canvas>
+            </div>
+            <table id="ventasTable" class="display">
                 <thead>
                     <tr>
-                        <th class="py-3 px-4 border-b">ID</th>
-                        <th class="py-3 px-4 border-b">Fecha</th>
-                        <th class="py-3 px-4 border-b">Monto</th>
-                        <th class="py-3 px-4 border-b">Usuario</th>
-                        <th class="py-3 px-4 border-b">Sucursal</th>
-                        <th class="py-3 px-4 border-b">Comentario</th>
+                        <th>ID</th>
+                        <th>Fecha</th>
+                        <th>Monto</th>
+                        <th>Usuario</th>
+                        <th>Sucursal</th>
+                        <th>Comentario</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php while ($row = $result->fetch_assoc()): ?>
-                    <tr>
-                        <td class="py-3 px-4 border-b"><?php echo $row['id']; ?></td>
-                        <td class="py-3 px-4 border-b"><?php echo $row['fecha']; ?></td>
-                        <td class="py-3 px-4 border-b"><?php echo "$" . number_format($row['monto'], 0, '', '.'); ?></td>
-                        <td class="py-3 px-4 border-b"><?php echo $row['usuario_nombre']; ?></td>
-                        <td class="py-3 px-4 border-b"><?php echo $sucursal['nombre']; ?></td>
-                        <td class="py-3 px-4 border-b"><?php echo $row['comentario']; ?></td>
-                    </tr>
+                        <tr>
+                            <td><?php echo $row['id']; ?></td>
+                            <td><?php echo $row['fecha']; ?></td>
+                            <td><?php echo "$" . number_format($row['monto'], 0, '', '.'); ?></td>
+                            <td><?php echo $row['usuario_nombre']; ?></td>
+                            <td><?php echo $sucursal['nombre']; ?></td>
+                            <td><?php echo $row['comentario']; ?></td>
+                        </tr>
                     <?php endwhile; ?>
                 </tbody>
             </table>
@@ -134,5 +132,35 @@ $result = $conn->query($query);
             </div>
         </div>
     </div>
+
+    <script>
+        $(document).ready(function() {
+            $('#ventasTable').DataTable();
+        });
+
+        var ctxVentas = document.getElementById('ventasChart').getContext('2d');
+        var ventasChart = new Chart(ctxVentas, {
+            type: 'line',
+            data: {
+                labels: <?php echo json_encode($ventas_labels); ?>,
+                datasets: [{
+                    label: 'Ventas',
+                    data: <?php echo json_encode($ventas_data); ?>,
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
 </body>
 </html>
