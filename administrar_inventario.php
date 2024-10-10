@@ -57,7 +57,18 @@ $query = $conn->prepare("INSERT INTO inventarios (descripcion, cantidad, tipo, f
 $query->bind_param("sissii", $descripcion, $cantidad, $tipo, $fecha, $usuario_id, $sucursal_id);
 
 if ($query->execute()) {
-    echo json_encode(['status' => 'success', 'message' => 'Registro agregado correctamente']);
+    // Devolver los datos del nuevo registro
+    $new_record_id = $query->insert_id;
+    $new_record = [
+        'id' => $new_record_id,
+        'descripcion' => $descripcion,
+        'cantidad' => $cantidad,
+        'tipo' => $tipo,
+        'fecha' => $fecha,
+        'usuario_id' => $usuario_id
+    ];
+    
+    echo json_encode(['status' => 'success', 'message' => 'Registro agregado correctamente', 'data' => $new_record]);
 } else {
     echo json_encode(['status' => 'error', 'message' => $query->error ?? 'Error al agregar el registro']);
 }

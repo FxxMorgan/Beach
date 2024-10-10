@@ -14,7 +14,6 @@ $usuario_id = $_SESSION['usuario_id'];
 $sucursal_id = $_GET['sucursal_id'] ?? $_SESSION['sucursal_id'];
 $rol = $_SESSION['rol'];
 
-
 // Obtener el nombre de la sucursal desde la base de datos
 $sucursal_query = "SELECT nombre FROM sucursales WHERE id='$sucursal_id'";
 $sucursal_result = $conn->query($sucursal_query);
@@ -121,29 +120,26 @@ while ($row = $inventarios_result->fetch_assoc()) {
     </div>
 
     <script>
-    $(document).ready(function() {
-        var notyf = new Notyf();
+$(document).ready(function() {
+    var notyf = new Notyf();
 
-        // Inicializar DataTable
-        var table = $('#inventariosTable').DataTable({
-            "language": {
-                "lengthMenu": "Mostrar _MENU_ registros por página",
-                "zeroRecords": "No se encontraron resultados",
-                "info": "Mostrando página _PAGE_ de _PAGES_",
-                "infoEmpty": "No hay registros disponibles",
-                "infoFiltered": "(filtrado de _MAX_ registros en total)",
-                "search": "Buscar:",
-                "paginate": {
-                    "first": "Primero",
-                    "last": "Último",
-                    "next": "Siguiente",
-                    "previous": "Anterior"
-                }
-            },
-            "processing": true,
-            "serverSide": true,
-            "ajax": "administrar_inventario.php" // Aquí se carga la data desde el servidor
-        });
+    // Inicializar DataTable
+    var table = $('#inventariosTable').DataTable({
+        "language": {
+            "lengthMenu": "Mostrar _MENU_ registros por página",
+            "zeroRecords": "No se encontraron resultados",
+            "info": "Mostrando página _PAGE_ de _PAGES_",
+            "infoEmpty": "No hay registros disponibles",
+            "infoFiltered": "(filtrado de _MAX_ registros en total)",
+            "search": "Buscar:",
+            "paginate": {
+                "first": "Primero",
+                "last": "Último",
+                "next": "Siguiente",
+                "previous": "Anterior"
+            }
+        },
+    });
 
         // Inicializar el gráfico de inventarios
         var ctxInventarios = document.getElementById('inventariosChart').getContext('2d');
@@ -187,35 +183,42 @@ while ($row = $inventarios_result->fetch_assoc()) {
             }
         });
 
-        // Manejo del formulario
-        $('#inventarioForm').on('submit', function(e) {
-            e.preventDefault();
-            var formData = $(this).serialize();
+    // Manejo del formulario
+    $('#inventarioForm').on('submit', function(e) {
+        e.preventDefault();
+        var formData = $(this).serialize();
 
-            $.ajax({
-                url: 'administrar_inventario.php',
-                type: 'POST',
-                data: formData,
-                dataType: 'json', // Asegura que la respuesta sea tratada como JSON
-                success: function(response) {
-                    console.log(response); // Log de la respuesta completa
-                    if (response.status === 'success') {
-                        notyf.success(response.message || 'Registro agregado correctamente');
-                        
-                        // Recargar la tabla usando ajax.reload() para obtener los datos más recientes
-                        table.ajax.reload(null, false); // El segundo parámetro 'false' mantiene la paginación actual
-                    } else {
-                        console.log(response.message); // Log del mensaje de error
-                        notyf.error(response.message || 'Error al agregar el registro');
-                    }
-                },
-                error: function(jqXHR, textStatus, errorThrown) {
-                    console.log('Error:', textStatus, errorThrown); // Log del error
-                    notyf.error('Hubo un error al agregar el registro');
+        $.ajax({
+            url: 'administrar_inventario.php',
+            type: 'POST',
+            data: formData,
+            dataType: 'json', // Asegura que la respuesta sea tratada como JSON
+            success: function(response) {
+                if (response.status === 'success') {
+                    notyf.success(response.message || 'Registro agregado correctamente');
+                    
+                    // Agregar nueva fila manualmente a la tabla
+                    var newRowData = [
+                        response.data.id,           // ID del registro
+                        response.data.descripcion,  // Descripción del producto
+                        response.data.cantidad,     // Cantidad agregada
+                        response.data.tipo,         // Tipo (ingreso/retiro)
+                        response.data.fecha,        // Fecha del registro
+                        response.data.usuario_id    // ID del usuario
+                    ];
+                    table.row.add(newRowData).draw(); // Añadir la nueva fila
+
+                } else {
+                    notyf.error(response.message || 'Error al agregar el registro');
                 }
-            });
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.log('Error:', textStatus, errorThrown); // Log del error
+                notyf.error('Hubo un error al agregar el registro');
+            }
         });
     });
+});
     </script>
 
 </body>
