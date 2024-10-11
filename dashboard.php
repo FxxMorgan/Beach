@@ -172,15 +172,15 @@ if ($rol == 'TI') {
         <h1 class="text-3xl font-bold text-center mb-5">Dashboard - Sucursal: <?php echo isset($sucursal['nombre']) ? $sucursal['nombre'] : 'No seleccionada'; ?></h1>
         <div class="max-w-8xl mx-auto bg-white p-6 rounded-lg shadow-md">
             <nav class="flex flex-wrap justify-center space-x-4 mb-6">
-                <a href="ventas.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Ver Ventas</a>
-                <a href="inventarios.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Ver Inventarios</a>
-                <a href="gastos.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Ver Gastos</a>
+                <a href="ventas.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mb-2">Ver Ventas</a>
+                <a href="inventarios.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mb-2">Ver Inventarios</a>
+                <a href="gastos.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mb-2">Ver Gastos</a>
                 <?php if ($rol == 'TI' || $rol == 'jefe'): ?>
-                    <a href="administrar_usuarios.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Administrar Usuarios</a>
-                    <a href="crear_usuario.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Agregar Usuarios</a>
+                    <a href="administrar_usuarios.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mb-2">Administrar Usuarios</a>
+                    <a href="crear_usuario.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mb-2">Agregar Usuarios</a>
                     <?php if ($rol == 'TI'): ?>
-                        <a href="administrar_sucursales.php" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Administrar Sucursales</a>
-                        <a href="auditoria.php" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mt-6 block">Auditoría</a>
+                        <a href="administrar_sucursales.php" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mb-2">Administrar Sucursales</a>
+                        <a href="auditoria.php" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mb-2">Auditoría</a>
                     <?php endif; ?>
                 <?php endif; ?>
             </nav>
@@ -188,14 +188,14 @@ if ($rol == 'TI') {
             <!-- Formulario de selección de rango de tiempo -->
             <form method="POST" class="mb-6 bg-white p-6 rounded-lg shadow-md">
                 <label for="time_range" class="block text-lg font-semibold mb-2">Seleccionar Rango de Tiempo:</label>
-                <select name="time_range" id="time_range" class="border p-2 rounded-md w-1/3 mb-4">
+                <select name="time_range" id="time_range" class="border p-2 rounded-md w-full sm:w-1/3 mb-4">
                     <option value="day" <?php echo $time_range == 'day' ? 'selected' : ''; ?>>Diario</option>
                     <option value="month" <?php echo $time_range == 'month' ? 'selected' : ''; ?>>Mensual</option>
                     <option value="year" <?php echo $time_range == 'year' ? 'selected' : ''; ?>>Anual</option>
                     <option value="custom" <?php echo $time_range == 'custom' ? 'selected' : ''; ?>>Personalizado</option>
                 </select>
-                <div class="flex mb-4">
-                    <input type="date" name="start_date" value="<?php echo $start_date; ?>" class="border p-2 rounded-md mr-2">
+                <div class="flex flex-col sm:flex-row mb-4">
+                    <input type="date" name="start_date" value="<?php echo $start_date; ?>" class="border p-2 rounded-md mb-2 sm:mb-0 sm:mr-2">
                     <input type="date" name="end_date" value="<?php echo $end_date; ?>" class="border p-2 rounded-md">
                 </div>
                 <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">Filtrar</button>

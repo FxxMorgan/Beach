@@ -73,7 +73,11 @@ if (!function_exists('auditoria')) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Administrar Sucursales</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.dataTables.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="bg-gray-100">
@@ -90,24 +94,24 @@ if (!function_exists('auditoria')) {
         </div>
         <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md mt-10">
             <h2 class="text-2xl font-bold mb-5">Sucursales</h2>
-            <table class="min-w-full bg-white">
+            <table id="sucursalesTable" class="display responsive nowrap" style="width:100%">
                 <thead>
                     <tr>
-                        <th class="py-3 px-4 border-b">ID</th>
-                        <th class="py-3 px-4 border-b">Nombre</th>
-                        <th class="py-3 px-4 border-b">Acciones</th>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php while ($row = $sucursales_result->fetch_assoc()): ?>
                     <tr>
-                        <td class="py-3 px-4 border-b"><?php echo $row['id']; ?></td>
-                        <td class="py-3 px-4 border-b">
+                        <td><?php echo $row['id']; ?></td>
+                        <td>
                             <form class="editarSucursalForm inline">
                                 <input type="hidden" name="id" value="<?php echo $row['id']; ?>">
                                 <input type="text" name="nombre" value="<?php echo $row['nombre']; ?>" class="w-full p-2 border rounded">
                         </td>
-                        <td class="py-3 px-4 border-b">
+                        <td>
                                 <button type="button" class="bg-blue-600 text-white p-2 rounded actualizarSucursalBtn">Actualizar</button>
                             </form>
                             <button type="button" class="bg-red-600 text-white p-2 rounded eliminarSucursalBtn" data-id="<?php echo $row['id']; ?>">Eliminar</button>
@@ -121,6 +125,10 @@ if (!function_exists('auditoria')) {
     </div>
     <script>
         $(document).ready(function() {
+            $('#sucursalesTable').DataTable({
+                responsive: true
+            });
+
             $('#agregarSucursalForm').on('submit', function(e) {
                 e.preventDefault();
                 var nombre = $('#nombre').val();

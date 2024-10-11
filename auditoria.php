@@ -32,6 +32,7 @@ $auditoria_result_all = $conn->query($auditoria_query_all);
 // Contar los registros
 $num_rows = $auditoria_result_all->num_rows;
 ?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -39,16 +40,28 @@ $num_rows = $auditoria_result_all->num_rows;
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Auditoría</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <!-- DataTables CSS -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.21/css/jquery.dataTables.min.css">
-    <!-- SweetAlert2 -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <!-- DataTables JS -->
-    <script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        table.dataTable thead th, table.dataTable thead td {
+            padding: 10px 18px;
+            border-bottom: 1px solid #111;
+        }
+        table.dataTable tbody th, table.dataTable tbody td {
+            padding: 8px 18px;
+        }
+        table.dataTable.no-footer {
+            border-bottom: 1px solid #111;
+        }
+        .dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_paginate {
+            padding: 10px 18px;
+        }
+    </style>
 </head>
 <body class="bg-gray-100">
     <div class="container mx-auto mt-10">
@@ -57,28 +70,30 @@ $num_rows = $auditoria_result_all->num_rows;
         <!-- Gráfico de Registros por Día -->
         <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md mb-6">
             <h2 class="text-2xl font-semibold text-center mb-4">Gráfico de Registros por Día</h2>
-            <canvas id="auditoriaChart" width="400" height="200"></canvas>
+            <div class="relative" style="height: 400px;">
+                <canvas id="auditoriaChart" class="w-full h-full"></canvas>
+            </div>
         </div>
 
         <!-- Tabla de Registros de Auditoría -->
         <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md">
             <?php if ($num_rows > 0): ?>
-                <table id="auditoriaTable" class="min-w-full bg-white">
+                <table id="auditoriaTable" class="display responsive nowrap" style="width:100%">
                     <thead>
                         <tr>
-                            <th class="py-3 px-4 border-b">ID</th>
-                            <th class="py-3 px-4 border-b">Usuario</th>
-                            <th class="py-3 px-4 border-b">Acción</th>
-                            <th class="py-3 px-4 border-b">Fecha</th>
+                            <th>ID</th>
+                            <th>Usuario</th>
+                            <th>Acción</th>
+                            <th>Fecha</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php while ($row = $auditoria_result_all->fetch_assoc()): ?>
                         <tr>
-                            <td class="py-3 px-4 border-b"><?php echo $row['id']; ?></td>
-                            <td class="py-3 px-4 border-b"><?php echo $row['usuario']; ?></td>
-                            <td class="py-3 px-4 border-b"><?php echo $row['accion']; ?></td>
-                            <td class="py-3 px-4 border-b"><?php echo $row['fecha']; ?></td>
+                            <td><?php echo $row['id']; ?></td>
+                            <td><?php echo $row['usuario']; ?></td>
+                            <td><?php echo $row['accion']; ?></td>
+                            <td><?php echo $row['fecha']; ?></td>
                         </tr>
                         <?php endwhile; ?>
                     </tbody>
@@ -97,33 +112,30 @@ $num_rows = $auditoria_result_all->num_rows;
         <a href="dashboard.php" class="block mt-4 text-center text-blue-500 hover:underline">Volver al Dashboard</a>
     </div>
 
-    <!-- Script para DataTables -->
     <script>
         $(document).ready(function() {
             $('#auditoriaTable').DataTable({
-                "language": {
-                    "lengthMenu": "Mostrar _MENU_ registros por página",
-                    "zeroRecords": "No se encontraron resultados",
-                    "info": "Mostrando página _PAGE_ de _PAGES_",
-                    "infoEmpty": "No hay registros disponibles",
-                    "infoFiltered": "(filtrado de _MAX_ registros en total)",
-                    "search": "Buscar:",
-                    "paginate": {
-                        "first": "Primero",
-                        "last": "Último",
-                        "next": "Siguiente",
-                        "previous": "Anterior"
+                responsive: true,
+                language: {
+                    lengthMenu: "Mostrar _MENU_ registros por página",
+                    zeroRecords: "No se encontraron resultados",
+                    info: "Mostrando página _PAGE_ de _PAGES_",
+                    infoEmpty: "No hay registros disponibles",
+                    infoFiltered: "(filtrado de _MAX_ registros en total)",
+                    search: "Buscar:",
+                    paginate: {
+                        first: "Primero",
+                        last: "Último",
+                        next: "Siguiente",
+                        previous: "Anterior"
                     }
                 }
             });
         });
-    </script>
 
-    <!-- Script para Chart.js -->
-    <script>
         var ctx = document.getElementById('auditoriaChart').getContext('2d');
         var auditoriaChart = new Chart(ctx, {
-            type: 'bar', // Puedes cambiarlo a 'line' si prefieres un gráfico de líneas
+            type: 'bar',
             data: {
                 labels: <?php echo json_encode($fechas); ?>,
                 datasets: [{
@@ -135,6 +147,7 @@ $num_rows = $auditoria_result_all->num_rows;
                 }]
             },
             options: {
+                maintainAspectRatio: false,
                 scales: {
                     y: {
                         beginAtZero: true,

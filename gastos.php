@@ -77,10 +77,12 @@ while ($row = $gastos_result->fetch_assoc()) {
     <title>Ver Gastos</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.dataTables.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
     <style>
         .chart-container {
             position: relative;
@@ -112,7 +114,7 @@ while ($row = $gastos_result->fetch_assoc()) {
             <div class="chart-container mx-auto mb-6">
                 <canvas id="gastosChart"></canvas>
             </div>
-            <table id="gastosTable" class="display">
+            <table id="gastosTable" class="display responsive nowrap" style="width:100%">
                 <thead>
                     <tr>
                         <th>ID</th>
@@ -140,7 +142,9 @@ while ($row = $gastos_result->fetch_assoc()) {
 
     <script>
         $(document).ready(function() {
-            $('#gastosTable').DataTable();
+            $('#gastosTable').DataTable({
+                responsive: true
+            });
         });
 
         var ctxGastos = document.getElementById('gastosChart').getContext('2d');

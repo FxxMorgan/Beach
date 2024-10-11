@@ -132,7 +132,11 @@ if (!function_exists('auditoria')) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Administrar Usuarios</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <!-- Asegúrate de que SweetAlert2 se cargue antes de cualquier uso -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="bg-gray-100">
@@ -141,36 +145,36 @@ if (!function_exists('auditoria')) {
         <button onclick="location.href='dashboard.php'" class="bg-blue-600 text-white p-2 rounded mb-5">Volver al Dashboard</button>
         <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md mt-10">
             <h2 class="text-2xl font-bold mb-5">Usuarios</h2>
-            <table class="min-w-full bg-white">
+            <table id="usuariosTable" class="display responsive nowrap" style="width:100%">
                 <thead>
                     <tr>
-                        <th class="py-3 px-4 border-b">ID</th>
-                        <th class="py-3 px-4 border-b">Nombre</th>
-                        <th class="py-3 px-4 border-b">Email</th>
-                        <th class="py-3 px-4 border-b">Rol</th>
-                        <th class="py-3 px-4 border-b">Acciones</th>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Email</th>
+                        <th>Rol</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php while ($row = $usuarios_result->fetch_assoc()): ?>
                     <tr>
-                        <td class="py-3 px-4 border-b"><?php echo $row['id']; ?></td>
-                        <td class="py-3 px-4 border-b">
+                        <td><?php echo $row['id']; ?></td>
+                        <td>
                             <form method="POST" class="inline">
                                 <input type="hidden" name="id" value="<?php echo $row['id']; ?>">
                                 <input type="text" name="nombre" value="<?php echo $row['nombre']; ?>" class="w-full p-2 border rounded">
                         </td>
-                        <td class="py-3 px-4 border-b">
+                        <td>
                                 <input type="email" name="email" value="<?php echo $row['email']; ?>" class="w-full p-2 border rounded">
                         </td>
-                        <td class="py-3 px-4 border-b">
+                        <td>
                                 <select name="rol" class="w-full p-2 border rounded">
                                     <option value="TI" <?php echo ($row['rol'] == 'TI') ? 'selected' : ''; ?>>TI</option>
                                     <option value="jefe" <?php echo ($row['rol'] == 'jefe') ? 'selected' : ''; ?>>Jefe</option>
                                     <option value="encargado" <?php echo ($row['rol'] == 'encargado') ? 'selected' : ''; ?>>Encargado</option>
                                 </select>
                         </td>
-                        <td class="py-3 px-4 border-b">
+                        <td>
                                 <button type="submit" name="update_user" class="bg-blue-600 text-white p-2 rounded">Actualizar</button>
                             </form>
                             <button type="button" class="bg-red-600 text-white p-2 rounded" onclick="confirmDelete(<?php echo $row['id']; ?>)">Eliminar</button>
@@ -181,17 +185,14 @@ if (!function_exists('auditoria')) {
             </table>
         </div>
     </div>
-    <!-- Modal de Confirmación -->
-    <div id="confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center">
-        <div class="bg-white p-6 rounded-lg shadow-md">
-            <h2 class="text-lg font-bold mb-4">¿Estás seguro de que deseas eliminar este usuario?</h2>
-            <div class="flex justify-between">
-                <button id="confirm-delete" class="bg-red-600 text-white p-2 rounded">Confirmar</button>
-                <button id="cancel-delete" class="bg-gray-400 text-white p-2 rounded">Cancelar</button>
-            </div>
-        </div>
-    </div>
+
     <script>
+        $(document).ready(function() {
+            $('#usuariosTable').DataTable({
+                responsive: true
+            });
+        });
+
         function confirmDelete(userId) {
             Swal.fire({
                 title: '¿Estás seguro?',
@@ -212,10 +213,9 @@ if (!function_exists('auditoria')) {
                         body: formData
                     }).then(response => response.text())
                     .then(responseText => {
-                        Swal.fire('Eliminado!', 'El usuario ha sido eliminado.', 'success')
-                            .then(() => {
-                                location.reload();
-                            });
+                        Swal.fire('Eliminado!', 'El usuario ha sido eliminado.', 'success').then(() => {
+                            location.reload();
+                        });
                     }).catch(error => {
                         Swal.fire('Error', 'Hubo un problema al eliminar el usuario.', 'error');
                     });

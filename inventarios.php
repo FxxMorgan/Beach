@@ -43,7 +43,7 @@ while ($row = $inventarios_result->fetch_assoc()) {
 }
 ?>
 
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -51,10 +51,12 @@ while ($row = $inventarios_result->fetch_assoc()) {
     <title>Ver Inventarios</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3.1.0/notyf.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/notyf@3.1.0/notyf.min.js"></script>
     <style>
         .chart-container {
@@ -89,7 +91,7 @@ while ($row = $inventarios_result->fetch_assoc()) {
             <div class="chart-container mx-auto mb-6">
                 <canvas id="inventariosChart"></canvas>
             </div>
-            <table id="inventariosTable" class="display">
+            <table id="inventariosTable" class="display responsive nowrap" style="width:100%">
                 <thead>
                     <tr>
                         <th>ID</th>
@@ -125,6 +127,7 @@ $(document).ready(function() {
 
     // Inicializar DataTable
     var table = $('#inventariosTable').DataTable({
+        responsive: true,
         "language": {
             "lengthMenu": "Mostrar _MENU_ registros por página",
             "zeroRecords": "No se encontraron resultados",
