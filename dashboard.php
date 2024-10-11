@@ -166,15 +166,37 @@ if ($rol == 'TI') {
             padding-bottom: 120px;
         }
     </style>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var timeRangeSelect = document.getElementById('time_range');
+        var dateInputs = document.querySelectorAll('input[type="date"]');
+        
+        function toggleDateInputs() {
+            if (timeRangeSelect.value === 'custom') {
+                dateInputs.forEach(function(input) {
+                    input.style.display = 'block';
+                });
+            } else {
+                dateInputs.forEach(function(input) {
+                    input.style.display = 'none';
+                    input.value = ''; // Clear date inputs if not custom
+                });
+            }
+        }
+        
+        timeRangeSelect.addEventListener('change', toggleDateInputs);
+        toggleDateInputs(); // Initial call to set correct visibility on page load
+    });
+    </script>
 </head>
 <body class="bg-gray-100">
     <div class="container mx-auto mt-10">
         <h1 class="text-3xl font-bold text-center mb-5">Dashboard - Sucursal: <?php echo isset($sucursal['nombre']) ? $sucursal['nombre'] : 'No seleccionada'; ?></h1>
         <div class="max-w-8xl mx-auto bg-white p-6 rounded-lg shadow-md">
             <nav class="flex flex-wrap justify-center space-x-4 mb-6">
-                <a href="ventas.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mb-2">Ver Ventas</a>
-                <a href="inventarios.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mb-2">Ver Inventarios</a>
-                <a href="gastos.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mb-2">Ver Gastos</a>
+                <a href="ventas.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mb-2">Ventas</a>
+                <a href="inventarios.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mb-2">Inventarios</a>
+                <a href="gastos.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mb-2">Gastos</a>
                 <?php if ($rol == 'TI' || $rol == 'jefe'): ?>
                     <a href="administrar_usuarios.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mb-2">Administrar Usuarios</a>
                     <a href="crear_usuario.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mb-2">Agregar Usuarios</a>
@@ -195,8 +217,8 @@ if ($rol == 'TI') {
                     <option value="custom" <?php echo $time_range == 'custom' ? 'selected' : ''; ?>>Personalizado</option>
                 </select>
                 <div class="flex flex-col sm:flex-row mb-4">
-                    <input type="date" name="start_date" value="<?php echo $start_date; ?>" class="border p-2 rounded-md mb-2 sm:mb-0 sm:mr-2">
-                    <input type="date" name="end_date" value="<?php echo $end_date; ?>" class="border p-2 rounded-md">
+                    <input type="date" name="start_date" value="<?php echo $start_date; ?>" class="border p-2 rounded-md mb-2 sm:mb-0 sm:mr-2" style="display: none;">
+                    <input type="date" name="end_date" value="<?php echo $end_date; ?>" class="border p-2 rounded-md" style="display: none;">
                 </div>
                 <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">Filtrar</button>
             </form>
