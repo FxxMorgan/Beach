@@ -96,7 +96,7 @@ if ($sucursal_id == 'todas') {
     $query = $conn->prepare("SELECT v.*, u.nombre as usuario_nombre, s.nombre as sucursal_nombre FROM ventas v JOIN usuarios u ON v.usuario_id = u.id JOIN sucursales s ON v.sucursal_id = s.id");
 } else {
     $query = $conn->prepare("SELECT v.*, u.nombre as usuario_nombre, s.nombre as sucursal_nombre FROM ventas v JOIN usuarios u ON v.usuario_id = u.id JOIN sucursales s ON v.sucursal_id = ? WHERE v.sucursal_id = ?");
-    $query->bind_param('ii', $sucursal_id, $sucursal_id);
+    $query->bind_param('i', $sucursal_id);
 }
 $query->execute();
 $result = $query->get_result();
@@ -164,7 +164,7 @@ while ($row = $ventas_result->fetch_assoc()) {
 <body class="bg-gray-100">
     <div class="container mx-auto mt-10">
         <h1 class="text-3xl font-bold text-center mb-5">Ventas - Sucursal: <?php echo $sucursal_nombre; ?></h1>
-        
+
         <!-- FORMULARIO DE FILTRO (Rango de tiempo y sucursal) -->
         <?php if ($rol == 'TI'): ?>
         <form method="GET" id="filterForm" class="mb-6 space-y-4">
@@ -200,6 +200,7 @@ while ($row = $ventas_result->fetch_assoc()) {
                     <input type="date" name="end_date" value="<?php echo $end_date; ?>" class="border p-2 rounded-md w-full">
                 </div>
             </div>
+            <button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Filtrar</button>
         </form>
         <?php endif; ?>
 
@@ -257,101 +258,48 @@ while ($row = $ventas_result->fetch_assoc()) {
     </div>
 
     <script>
-$(document).ready(function() {
-    var notyf = new Notyf();
-    var formSubmitting = false; // Bandera para evitar múltiples envíos
-
-    // Mostrar/ocultar inputs de fecha según el rango de tiempo
-    $('#time_range').change(function() {
-        if ($(this).val() === 'custom') {
-            $('#customDates').show();  // Mostrar las fechas si selecciona "personalizado"
-        } else {
-            $('#customDates').hide();  // Ocultar las fechas si no es "personalizado"
-        }
-
-        // Notificar cuando se cambia el rango de tiempo
-        var selectedRange = $(this).find('option:selected').text();
-        notyf.success('Rango de tiempo cambiado a: ' + selectedRange);
-
-        // Enviar el formulario automáticamente al cambiar el rango de tiempo
-        submitFilterForm();
-    });
-
-    // Función para enviar el formulario de filtro
-    function submitFilterForm() {
-        if (!formSubmitting) {
-            formSubmitting = true;
-            // Prevenir el envío automático para no hacer recarga.
-            $('#filterForm').submit();
-        }
-    }
-
-    // Enviar el formulario automáticamente al cambiar de sucursal
-    $('#sucursal_id').change(function() {
-        submitFilterForm();
-
-        // Notificar cuando se cambia la sucursal
-        var selectedBranch = $(this).find('option:selected').text();
-        notyf.success('Sucursal cambiada a: ' + selectedBranch);
-    });
-
-    // Prevent default form submission and use AJAX
-    $('#filterForm').submit(function(event) {
-        event.preventDefault(); // Previene el comportamiento predeterminado (recarga).
-        formSubmitting = true;  // Desactiva el envío para evitar múltiples envíos.
+    $(document).ready(function() {
+        var notyf = new Notyf();
         
-        // Realizar la solicitud AJAX para enviar los datos sin recargar
-        $.ajax({
-            url: 'ventas.php',
-            method: 'GET',
-            data: $(this).serialize(),
-            success: function(response) {
-                // Actualizar la tabla con los nuevos datos
-                $('#ventasTable').html($(response).find('#ventasTable').html());
+        // Mostrar/ocultar inputs de fecha según el rango de tiempo
+        $('#time_range').change(function() {
+            if ($(this).val() === 'custom') {
+                $('#customDates').show();
+            } else {
+                $('#customDates').hide();
+            }
+        });
 
-                // Inicializar o reinicializar DataTables después de actualizar el contenido
-                $('#ventasTable').DataTable().destroy();  // Destruir la instancia anterior
-                $('#ventasTable').DataTable({
-                    responsive: true
-                });
+        // Inicializar DataTables
+        $('#ventasTable').DataTable({
+            responsive: true
+        });
+
+        // Gráfico de ventas
+        var ctxVentas = document.getElementById('ventasChart').getContext('2d');
+        var ventasChart = new Chart(ctxVentas, {
+            type: 'line',
+            data: {
+                labels: <?php echo json_encode($ventas_labels); ?>,
+                datasets: [{
+                    label: 'Ventas',
+                    data: <?php echo json_encode($ventas_data); ?>,
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
             },
-            error: function() {
-                alert('Error al cargar los datos');
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
             }
         });
     });
-
-    // Inicializar DataTables
-    $('#ventasTable').DataTable({
-        responsive: true
-    });
-
-    // Gráfico de ventas
-    var ctxVentas = document.getElementById('ventasChart').getContext('2d');
-    var ventasChart = new Chart(ctxVentas, {
-        type: 'line',
-        data: {
-            labels: <?php echo json_encode($ventas_labels); ?>,  // Etiquetas de los períodos
-            datasets: [{
-                label: 'Ventas',
-                data: <?php echo json_encode($ventas_data); ?>,
-                backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                borderColor: 'rgba(54, 162, 235, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
-    });
-});
-</script>
-
+    </script>
 </body>
 </html>
