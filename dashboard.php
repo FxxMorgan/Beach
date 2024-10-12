@@ -200,6 +200,7 @@ if ($rol == 'TI') {
                 <?php if ($rol == 'TI' || $rol == 'jefe'): ?>
                     <a href="administrar_usuarios.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mb-2">Administrar Usuarios</a>
                     <a href="crear_usuario.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mb-2">Agregar Usuarios</a>
+                    <a href="comparativa.php" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mb-2">Comparativa</a>
                     <?php if ($rol == 'TI'): ?>
                         <a href="administrar_sucursales.php" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mb-2">Administrar Sucursales</a>
                         <a href="auditoria.php" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mb-2">Auditoría</a>
