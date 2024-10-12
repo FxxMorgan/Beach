@@ -105,45 +105,56 @@ if ($period1 && $period2) {
     </div>
 
     <script>
-    var ctx = document.getElementById('comparativaChart').getContext('2d');
-    var comparativaChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: ['<?php echo $period1; ?>', '<?php echo $period2; ?>'],
-            datasets: [{
-                label: '<?php echo $period1; ?>',
-                data: <?php echo json_encode($data_period1); ?>,
-                backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                borderColor: 'rgba(54, 162, 235, 1)',
-                borderWidth: 1
-            }, {
-                label: '<?php echo $period2; ?>',
-                data: <?php echo json_encode($data_period2); ?>,
-                backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                borderColor: 'rgba(255, 99, 132, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Ventas Totales'
-                    }
+var ctx = document.getElementById('comparativaChart').getContext('2d');
+var comparativaChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: ['<?php echo $period1; ?>', '<?php echo $period2; ?>'],
+        datasets: [{
+            label: 'Period 1: <?php echo $period1; ?>',
+            data: [<?php echo json_encode($data_period1); ?>, 0],
+            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+        }, {
+            label: 'Period 2: <?php echo $period2; ?>',
+            data: [0, <?php echo json_encode($data_period2); ?>],
+            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+            borderColor: 'rgba(255, 99, 132, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        scales: {
+            x: {
+                stacked: true,
+                title: {
+                    display: true,
+                    text: 'Periodos'
                 },
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Periodos'
-                    }
+                ticks: {
+                    autoSkip: false
+                },
+                grid: {
+                    display: false
+                }
+            },
+            y: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: 'Ventas Totales'
                 }
             }
-        }
-    });
-    </script>
+        },
+        barThickness: 200,
+        barPercentage: 0.5,
+        categoryPercentage: 0.5
+    }
+});
+</script>
+
 </body>
 </html>
