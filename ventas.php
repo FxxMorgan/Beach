@@ -1,5 +1,4 @@
 <?php
-
 session_start();
 if (!isset($_SESSION['usuario_id']) || !isset($_SESSION['sucursal_id']) || !isset($_SESSION['rol'])) {
     header('Location: login.php');
@@ -15,12 +14,12 @@ if ($conn->connect_error) {
 date_default_timezone_set('America/Santiago');
 
 $usuario_id = $_SESSION['usuario_id'];
-$sucursal_id = $_GET['sucursal_id'] ?? $_SESSION['sucursal_id'];
+$sucursal_id = $_GET['sucursal_id'] ?? $_SESSION['sucursal_id'];  // Usamos GET para filtrar
 $rol = $_SESSION['rol'];
 $success_message = "";
-$time_range = $_POST['time_range'] ?? 'month'; // Validación para evitar warnings
-$start_date = $_POST['start_date'] ?? null;
-$end_date = $_POST['end_date'] ?? null;
+$time_range = $_GET['time_range'] ?? 'month';  // Filtrar por GET
+$start_date = $_GET['start_date'] ?? null;
+$end_date = $_GET['end_date'] ?? null;
 $date_format = '%Y-%m'; // Default es mensual
 
 // Obtener lista de sucursales solo para el rol TI
@@ -54,7 +53,8 @@ function auditoria($conn, $accion, $usuario_id) {
     $query->execute();
 }
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+// Registro de ventas solo si es una solicitud POST
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['monto'])) {
     // Validar que monto y comentario estén definidos antes de acceder
     $monto = isset($_POST['monto']) ? str_replace('.', '', $_POST['monto']) : 0;
     $comentario = $_POST['comentario'] ?? ''; // Si no está definido, asignar vacío
@@ -95,18 +95,18 @@ switch ($time_range) {
 if ($sucursal_id == 'todas') {
     $query = $conn->prepare("SELECT v.*, u.nombre as usuario_nombre, s.nombre as sucursal_nombre FROM ventas v JOIN usuarios u ON v.usuario_id = u.id JOIN sucursales s ON v.sucursal_id = s.id");
 } else {
-    $query = $conn->prepare("SELECT v.*, u.nombre as usuario_nombre, s.nombre as sucursal_nombre FROM ventas v JOIN usuarios u ON v.usuario_id = u.id JOIN sucursales s ON v.sucursal_id = s.id WHERE v.sucursal_id = ?");
+    $query = $conn->prepare("SELECT v.*, u.nombre as usuario_nombre, s.nombre as sucursal_nombre FROM ventas v JOIN usuarios u ON v.usuario_id = u.id JOIN sucursales s ON v.sucursal_id = ? WHERE v.sucursal_id = ?");
     $query->bind_param('i', $sucursal_id);
 }
 $query->execute();
 $result = $query->get_result();
 
 // Obtener datos para el gráfico
-if ($sucursal_id == 'todas') {
-    $ventas_query = "SELECT DATE_FORMAT(fecha, '$date_format') AS periodo, SUM(monto) AS total FROM ventas GROUP BY periodo ORDER BY periodo ASC";
-} else {
-    $ventas_query = "SELECT DATE_FORMAT(fecha, '$date_format') AS periodo, SUM(monto) AS total FROM ventas WHERE sucursal_id = ? GROUP BY periodo ORDER BY periodo ASC";
+$ventas_query = "SELECT DATE_FORMAT(fecha, '$date_format') AS periodo, SUM(monto) AS total FROM ventas WHERE 1=1 ";
+if ($sucursal_id != 'todas') {
+    $ventas_query .= " AND sucursal_id = ? ";
 }
+$ventas_query .= " GROUP BY periodo ORDER BY periodo ASC";
 
 $ventas_stmt = $conn->prepare($ventas_query);
 if ($sucursal_id != 'todas') {
@@ -125,6 +125,7 @@ while ($row = $ventas_result->fetch_assoc()) {
     $ventas_data[] = $row['total'];
 }
 ?>
+
 
 <!DOCTYPE html>
 <html lang="es">
@@ -154,8 +155,9 @@ while ($row = $ventas_result->fetch_assoc()) {
     <div class="container mx-auto mt-10">
         <h1 class="text-3xl font-bold text-center mb-5">Ventas - Sucursal: <?php echo $sucursal_nombre; ?></h1>
         
+        <!-- FORMULARIO DE FILTRO (Rango de tiempo y sucursal) -->
         <?php if ($rol == 'TI'): ?>
-        <form method="POST" id="filterForm" class="mb-6 space-y-4">
+        <form method="GET" id="filterForm" class="mb-6 space-y-4">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label for="time_range" class="block text-lg font-semibold mb-2">Seleccionar Rango de Tiempo:</label>
@@ -188,11 +190,10 @@ while ($row = $ventas_result->fetch_assoc()) {
                     <input type="date" name="end_date" value="<?php echo $end_date; ?>" class="border p-2 rounded-md w-full">
                 </div>
             </div>
-
-            <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">Filtrar</button>
         </form>
         <?php endif; ?>
 
+        <!-- FORMULARIO DE REGISTRO DE VENTAS (método POST) -->
         <div class="max-w-4xl mx-auto bg-white p-10 rounded-lg shadow-md">
             <form method="POST" id="ventaForm" class="mb-6">
                 <div class="mb-4">
@@ -247,6 +248,8 @@ while ($row = $ventas_result->fetch_assoc()) {
 
     <script>
     $(document).ready(function() {
+        var notyf = new Notyf();
+
         // Mostrar/ocultar inputs de fecha según el rango de tiempo
         $('#time_range').change(function() {
             if ($(this).val() === 'custom') {
@@ -254,11 +257,26 @@ while ($row = $ventas_result->fetch_assoc()) {
             } else {
                 $('#customDates').hide();  // Ocultar las fechas si no es "personalizado"
             }
+
+            // Enviar el formulario automáticamente cuando se cambia el rango de tiempo
+            $('#filterForm').submit();
         }).trigger('change');  // Ejecutar la lógica al cargar la página
 
-        // Actualizar automáticamente el formulario cuando se cambie el rango de tiempo o la sucursal
-        $('#time_range, #sucursal_id').change(function() {
-            $('#filterForm').submit();  // Enviar el formulario automáticamente al cambiar
+        // Notificar cuando se cambia el rango de tiempo
+        $('#time_range').change(function() {
+            var selectedRange = $(this).find('option:selected').text();
+            notyf.success('Rango de tiempo cambiado a: ' + selectedRange);
+        });
+
+        // Enviar el formulario automáticamente al cambiar de sucursal
+        $('#sucursal_id').change(function() {
+            $('#filterForm').submit();
+        });
+
+        // Notificar cuando se cambia la sucursal
+        $('#sucursal_id').change(function() {
+            var selectedBranch = $(this).find('option:selected').text();
+            notyf.success('Sucursal cambiada a: ' + selectedBranch);
         });
 
         // Inicializar DataTables
@@ -266,39 +284,33 @@ while ($row = $ventas_result->fetch_assoc()) {
             responsive: true
         });
 
-        // Inicializar Notyf para mostrar alertas de éxito
-        var notyf = new Notyf();
-
-        <?php if (!empty($success_message)): ?>
-            notyf.success('<?php echo $success_message; ?>');  // Mostrar el mensaje de éxito si existe
-        <?php endif; ?>
-
         // Gráfico de ventas
         var ctxVentas = document.getElementById('ventasChart').getContext('2d');
         var ventasChart = new Chart(ctxVentas, {
-            type: 'line',  // Tipo de gráfico
+            type: 'line',
             data: {
                 labels: <?php echo json_encode($ventas_labels); ?>,  // Etiquetas de los períodos
                 datasets: [{
                     label: 'Ventas',
-                    data: <?php echo json_encode($ventas_data); ?>,  // Datos de las ventas
-                    backgroundColor: 'rgba(54, 162, 235, 0.2)',  // Color de fondo
-                    borderColor: 'rgba(54, 162, 235, 1)',  // Color de borde
-                    borderWidth: 1  // Ancho de borde
+                    data: <?php echo json_encode($ventas_data); ?>,
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
                 }]
             },
             options: {
-                responsive: true,  // Hacer el gráfico responsivo
-                maintainAspectRatio: false,  // Mantener el aspecto del gráfico
+                responsive: true,
+                maintainAspectRatio: false,
                 scales: {
                     y: {
-                        beginAtZero: true  // Comenzar el eje Y en 0
+                        beginAtZero: true
                     }
                 }
             }
         });
     });
 </script>
+
 
 </body>
 </html>
