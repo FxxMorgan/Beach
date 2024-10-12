@@ -96,26 +96,35 @@ if ($sucursal_id == 'todas') {
     $query = $conn->prepare("SELECT v.*, u.nombre as usuario_nombre, s.nombre as sucursal_nombre FROM ventas v JOIN usuarios u ON v.usuario_id = u.id JOIN sucursales s ON v.sucursal_id = s.id");
 } else {
     $query = $conn->prepare("SELECT v.*, u.nombre as usuario_nombre, s.nombre as sucursal_nombre FROM ventas v JOIN usuarios u ON v.usuario_id = u.id JOIN sucursales s ON v.sucursal_id = ? WHERE v.sucursal_id = ?");
-    $query->bind_param('i', $sucursal_id);
+    $query->bind_param('ii', $sucursal_id, $sucursal_id);
 }
 $query->execute();
 $result = $query->get_result();
 
 // Obtener datos para el gráfico
 $ventas_query = "SELECT DATE_FORMAT(fecha, '$date_format') AS periodo, SUM(monto) AS total FROM ventas WHERE 1=1 ";
+
 if ($sucursal_id != 'todas') {
     $ventas_query .= " AND sucursal_id = ? ";
 }
+
+if ($date_condition) {
+    $ventas_query .= " " . $date_condition;  // Solo agregar si se seleccionó rango de fechas personalizado
+}
+
 $ventas_query .= " GROUP BY periodo ORDER BY periodo ASC";
 
 $ventas_stmt = $conn->prepare($ventas_query);
-if ($sucursal_id != 'todas') {
-    if ($date_condition) {
-        $ventas_stmt->bind_param('iss', $sucursal_id, $start_date, $end_date);
-    } else {
-        $ventas_stmt->bind_param('i', $sucursal_id);
-    }
+
+// Si se seleccionó un rango de fechas personalizado, agregar parámetros para las fechas
+if ($sucursal_id != 'todas' && $date_condition) {
+    $ventas_stmt->bind_param('iss', $sucursal_id, $start_date, $end_date);
+} else if ($sucursal_id != 'todas') {
+    $ventas_stmt->bind_param('i', $sucursal_id);
+} else if ($date_condition) {
+    $ventas_stmt->bind_param('ss', $start_date, $end_date);
 }
+
 $ventas_stmt->execute();
 $ventas_result = $ventas_stmt->get_result();
 $ventas_data = [];
@@ -124,6 +133,7 @@ while ($row = $ventas_result->fetch_assoc()) {
     $ventas_labels[] = $row['periodo'];
     $ventas_data[] = $row['total'];
 }
+
 ?>
 
 
@@ -247,70 +257,101 @@ while ($row = $ventas_result->fetch_assoc()) {
     </div>
 
     <script>
-    $(document).ready(function() {
-        var notyf = new Notyf();
+$(document).ready(function() {
+    var notyf = new Notyf();
+    var formSubmitting = false; // Bandera para evitar múltiples envíos
 
-        // Mostrar/ocultar inputs de fecha según el rango de tiempo
-        $('#time_range').change(function() {
-            if ($(this).val() === 'custom') {
-                $('#customDates').show();  // Mostrar las fechas si selecciona "personalizado"
-            } else {
-                $('#customDates').hide();  // Ocultar las fechas si no es "personalizado"
-            }
-
-            // Enviar el formulario automáticamente cuando se cambia el rango de tiempo
-            $('#filterForm').submit();
-        }).trigger('change');  // Ejecutar la lógica al cargar la página
+    // Mostrar/ocultar inputs de fecha según el rango de tiempo
+    $('#time_range').change(function() {
+        if ($(this).val() === 'custom') {
+            $('#customDates').show();  // Mostrar las fechas si selecciona "personalizado"
+        } else {
+            $('#customDates').hide();  // Ocultar las fechas si no es "personalizado"
+        }
 
         // Notificar cuando se cambia el rango de tiempo
-        $('#time_range').change(function() {
-            var selectedRange = $(this).find('option:selected').text();
-            notyf.success('Rango de tiempo cambiado a: ' + selectedRange);
-        });
+        var selectedRange = $(this).find('option:selected').text();
+        notyf.success('Rango de tiempo cambiado a: ' + selectedRange);
 
-        // Enviar el formulario automáticamente al cambiar de sucursal
-        $('#sucursal_id').change(function() {
+        // Enviar el formulario automáticamente al cambiar el rango de tiempo
+        submitFilterForm();
+    });
+
+    // Función para enviar el formulario de filtro
+    function submitFilterForm() {
+        if (!formSubmitting) {
+            formSubmitting = true;
+            // Prevenir el envío automático para no hacer recarga.
             $('#filterForm').submit();
-        });
+        }
+    }
+
+    // Enviar el formulario automáticamente al cambiar de sucursal
+    $('#sucursal_id').change(function() {
+        submitFilterForm();
 
         // Notificar cuando se cambia la sucursal
-        $('#sucursal_id').change(function() {
-            var selectedBranch = $(this).find('option:selected').text();
-            notyf.success('Sucursal cambiada a: ' + selectedBranch);
-        });
+        var selectedBranch = $(this).find('option:selected').text();
+        notyf.success('Sucursal cambiada a: ' + selectedBranch);
+    });
 
-        // Inicializar DataTables
-        $('#ventasTable').DataTable({
-            responsive: true
-        });
+    // Prevent default form submission and use AJAX
+    $('#filterForm').submit(function(event) {
+        event.preventDefault(); // Previene el comportamiento predeterminado (recarga).
+        formSubmitting = true;  // Desactiva el envío para evitar múltiples envíos.
+        
+        // Realizar la solicitud AJAX para enviar los datos sin recargar
+        $.ajax({
+            url: 'ventas.php',
+            method: 'GET',
+            data: $(this).serialize(),
+            success: function(response) {
+                // Actualizar la tabla con los nuevos datos
+                $('#ventasTable').html($(response).find('#ventasTable').html());
 
-        // Gráfico de ventas
-        var ctxVentas = document.getElementById('ventasChart').getContext('2d');
-        var ventasChart = new Chart(ctxVentas, {
-            type: 'line',
-            data: {
-                labels: <?php echo json_encode($ventas_labels); ?>,  // Etiquetas de los períodos
-                datasets: [{
-                    label: 'Ventas',
-                    data: <?php echo json_encode($ventas_data); ?>,
-                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1
-                }]
+                // Inicializar o reinicializar DataTables después de actualizar el contenido
+                $('#ventasTable').DataTable().destroy();  // Destruir la instancia anterior
+                $('#ventasTable').DataTable({
+                    responsive: true
+                });
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
+            error: function() {
+                alert('Error al cargar los datos');
             }
         });
     });
-</script>
 
+    // Inicializar DataTables
+    $('#ventasTable').DataTable({
+        responsive: true
+    });
+
+    // Gráfico de ventas
+    var ctxVentas = document.getElementById('ventasChart').getContext('2d');
+    var ventasChart = new Chart(ctxVentas, {
+        type: 'line',
+        data: {
+            labels: <?php echo json_encode($ventas_labels); ?>,  // Etiquetas de los períodos
+            datasets: [{
+                label: 'Ventas',
+                data: <?php echo json_encode($ventas_data); ?>,
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+});
+</script>
 
 </body>
 </html>
