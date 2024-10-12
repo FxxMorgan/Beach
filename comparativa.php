@@ -36,22 +36,39 @@ if ($sucursal_id != 'todas') {
 }
 
 // Obtener datos para los dos periodos a comparar
-$period1 = $_GET['period1'] ?? '';
-$period2 = $_GET['period2'] ?? '';
+$date1 = $_GET['date1'] ?? '';
+$date2 = $_GET['date2'] ?? '';
+$comparison_type = $_GET['comparison_type'] ?? 'ventas';
 $data_period1 = [];
 $data_period2 = [];
 
-if ($period1 && $period2) {
-    $query1 = $conn->prepare("SELECT DATE_FORMAT(fecha, '%Y-%m') AS periodo, SUM(monto) AS total FROM ventas WHERE sucursal_id = ? AND DATE_FORMAT(fecha, '%Y-%m') = ? GROUP BY periodo");
-    $query1->bind_param('is', $sucursal_id, $period1);
+if ($date1 && $date2) {
+    switch ($comparison_type) {
+        case 'inventarios':
+            $table = 'inventarios';
+            $column = 'cantidad';
+            break;
+        case 'gastos':
+            $table = 'gastos';
+            $column = 'monto';
+            break;
+        case 'ventas':
+        default:
+            $table = 'ventas';
+            $column = 'monto';
+            break;
+    }
+
+    $query1 = $conn->prepare("SELECT DATE_FORMAT(fecha, '%Y-%m-%d') AS periodo, SUM($column) AS total FROM $table WHERE sucursal_id = ? AND DATE_FORMAT(fecha, '%Y-%m-%d') = ? GROUP BY periodo");
+    $query1->bind_param('is', $sucursal_id, $date1);
     $query1->execute();
     $result1 = $query1->get_result();
     while ($row = $result1->fetch_assoc()) {
         $data_period1[] = $row['total'];
     }
 
-    $query2 = $conn->prepare("SELECT DATE_FORMAT(fecha, '%Y-%m') AS periodo, SUM(monto) AS total FROM ventas WHERE sucursal_id = ? AND DATE_FORMAT(fecha, '%Y-%m') = ? GROUP BY periodo");
-    $query2->bind_param('is', $sucursal_id, $period2);
+    $query2 = $conn->prepare("SELECT DATE_FORMAT(fecha, '%Y-%m-%d') AS periodo, SUM($column) AS total FROM $table WHERE sucursal_id = ? AND DATE_FORMAT(fecha, '%Y-%m-%d') = ? GROUP BY periodo");
+    $query2->bind_param('is', $sucursal_id, $date2);
     $query2->execute();
     $result2 = $query2->get_result();
     while ($row = $result2->fetch_assoc()) {
@@ -77,13 +94,21 @@ if ($period1 && $period2) {
         <form method="GET" class="mb-6 space-y-4">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label for="period1" class="block text-lg font-semibold mb-2">Periodo 1:</label>
-                    <input type="month" name="period1" id="period1" class="border p-2 rounded-md w-full" value="<?php echo $period1; ?>" required>
+                    <label for="date1" class="block text-lg font-semibold mb-2">Fecha 1:</label>
+                    <input type="date" name="date1" id="date1" class="border p-2 rounded-md w-full" value="<?php echo $date1; ?>" required>
                 </div>
                 <div>
-                    <label for="period2" class="block text-lg font-semibold mb-2">Periodo 2:</label>
-                    <input type="month" name="period2" id="period2" class="border p-2 rounded-md w-full" value="<?php echo $period2; ?>" required>
+                    <label for="date2" class="block text-lg font-semibold mb-2">Fecha 2:</label>
+                    <input type="date" name="date2" id="date2" class="border p-2 rounded-md w-full" value="<?php echo $date2; ?>" required>
                 </div>
+            </div>
+            <div>
+                <label for="comparison_type" class="block text-lg font-semibold mb-2">Tipo de Comparación:</label>
+                <select name="comparison_type" id="comparison_type" class="border p-2 rounded-md w-full">
+                    <option value="ventas" <?php echo $comparison_type == 'ventas' ? 'selected' : ''; ?>>Ventas</option>
+                    <option value="inventarios" <?php echo $comparison_type == 'inventarios' ? 'selected' : ''; ?>>Inventarios</option>
+                    <option value="gastos" <?php echo $comparison_type == 'gastos' ? 'selected' : ''; ?>>Gastos</option>
+                </select>
             </div>
             <div>
                 <label for="sucursal_id" class="block text-lg font-semibold mb-2">Seleccionar Sucursal:</label>
