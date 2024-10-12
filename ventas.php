@@ -92,12 +92,18 @@ switch ($time_range) {
 }
 
 // Obtener ventas y nombres de usuarios
-if ($sucursal_id == 'todas') {
-    $query = $conn->prepare("SELECT v.*, u.nombre as usuario_nombre, s.nombre as sucursal_nombre FROM ventas v JOIN usuarios u ON v.usuario_id = u.id JOIN sucursales s ON v.sucursal_id = s.id");
-} else {
-    $query = $conn->prepare("SELECT v.*, u.nombre as usuario_nombre, s.nombre as sucursal_nombre FROM ventas v JOIN usuarios u ON v.usuario_id = u.id JOIN sucursales s ON v.sucursal_id = ? WHERE v.sucursal_id = ?");
+$query_string = "SELECT v.*, u.nombre as usuario_nombre, s.nombre as sucursal_nombre FROM ventas v JOIN usuarios u ON v.usuario_id = u.id JOIN sucursales s ON v.sucursal_id = s.id WHERE 1=1";
+
+if ($sucursal_id != 'todas') {
+    $query_string .= " AND v.sucursal_id = ?";
+}
+
+$query = $conn->prepare($query_string);
+
+if ($sucursal_id != 'todas') {
     $query->bind_param('i', $sucursal_id);
 }
+
 $query->execute();
 $result = $query->get_result();
 
@@ -133,9 +139,7 @@ while ($row = $ventas_result->fetch_assoc()) {
     $ventas_labels[] = $row['periodo'];
     $ventas_data[] = $row['total'];
 }
-
 ?>
-
 
 <!DOCTYPE html>
 <html lang="es">
