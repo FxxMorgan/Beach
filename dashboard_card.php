@@ -7,7 +7,6 @@ if (!isset($_SESSION['usuario_id']) || !isset($_SESSION['sucursal_id']) || !isse
     exit();
 }
 
-// Obtener la fecha de ayer
 $yesterday = date('Y-m-d', strtotime('-1 day'));
 
 // Función para obtener la conexión a la base de datos
@@ -21,12 +20,12 @@ function get_db_connection() {
 
 $conn = get_db_connection();
 
-// Obtener todas las sucursales
+// Obtener lista de todas las sucursales
 $sucursales_query = $conn->prepare("SELECT id, nombre, tipo FROM sucursales");
 $sucursales_query->execute();
 $sucursales = $sucursales_query->get_result();
 
-// Función para obtener los datos de ventas y gastos del día anterior
+// Función para obtener datos de ventas y gastos del día anterior
 function get_sucursal_data($conn, $sucursal_id, $date) {
     // Datos de ventas
     $ventas_query = $conn->prepare("SELECT SUM(monto) AS total_ventas FROM ventas WHERE sucursal_id = ? AND DATE(fecha) = ?");
@@ -46,21 +45,15 @@ function get_sucursal_data($conn, $sucursal_id, $date) {
     ];
 }
 
-$data = [];
+// Agrupar sucursales por tipo (rubro)
+$grouped_data = [];
 while ($sucursal = $sucursales->fetch_assoc()) {
     $sucursal_data = get_sucursal_data($conn, $sucursal['id'], $yesterday);
-    $data[] = [
+    $grouped_data[$sucursal['tipo']][] = [
         'sucursal' => $sucursal['nombre'],
-        'tipo' => $sucursal['tipo'],
         'ventas' => $sucursal_data['ventas'],
         'gastos' => $sucursal_data['gastos']
     ];
-}
-
-// Agrupar sucursales por tipo
-$grouped_data = [];
-foreach ($data as $item) {
-    $grouped_data[$item['tipo']][] = $item;
 }
 
 ?>
@@ -77,17 +70,19 @@ foreach ($data as $item) {
 <body class="bg-gray-100">
     <div class="container mx-auto mt-10">
         <h1 class="text-3xl font-bold text-center mb-5">Sucursales - Datos del día anterior (<?php echo date('d/m/Y', strtotime($yesterday)); ?>)</h1>
+        
+        <!-- Recorrer los rubros -->
         <?php foreach ($grouped_data as $tipo => $sucursales): ?>
-            <h2 class="text-2xl font-bold mb-5"><?php echo $tipo; ?></h2>
+            <h2 class="text-2xl font-bold mb-5"><?php echo $tipo; ?> - Sucursales</h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
                 <?php
                 $chartCount = 0;
                 foreach ($sucursales as $item) {
                     $chartCount++;
-                    $chartId = 'chart-' . $chartCount;
+                    $chartId = 'chart-' . $tipo . '-' . $chartCount; // Un ID único para cada gráfico
                 ?>
                     <div class="bg-white p-6 rounded-lg shadow-md">
-                        <h2 class="text-2xl font-semibold mb-4"><?php echo $item['sucursal']; ?></h2>
+                        <h3 class="text-xl font-semibold mb-4"><?php echo $item['sucursal']; ?></h3>
                         <p class="text-lg">Ventas: <strong>$<?php echo number_format($item['ventas'], 2); ?></strong></p>
                         <p class="text-lg">Gastos: <strong>$<?php echo number_format($item['gastos'], 2); ?></strong></p>
                         
