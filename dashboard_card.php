@@ -22,7 +22,7 @@ function get_db_connection() {
 $conn = get_db_connection();
 
 // Obtener todas las sucursales
-$sucursales_query = $conn->prepare("SELECT id, nombre FROM sucursales");
+$sucursales_query = $conn->prepare("SELECT id, nombre, tipo FROM sucursales");
 $sucursales_query->execute();
 $sucursales = $sucursales_query->get_result();
 
@@ -51,9 +51,16 @@ while ($sucursal = $sucursales->fetch_assoc()) {
     $sucursal_data = get_sucursal_data($conn, $sucursal['id'], $yesterday);
     $data[] = [
         'sucursal' => $sucursal['nombre'],
+        'tipo' => $sucursal['tipo'],
         'ventas' => $sucursal_data['ventas'],
         'gastos' => $sucursal_data['gastos']
     ];
+}
+
+// Agrupar sucursales por tipo
+$grouped_data = [];
+foreach ($data as $item) {
+    $grouped_data[$item['tipo']][] = $item;
 }
 
 ?>
@@ -70,50 +77,53 @@ while ($sucursal = $sucursales->fetch_assoc()) {
 <body class="bg-gray-100">
     <div class="container mx-auto mt-10">
         <h1 class="text-3xl font-bold text-center mb-5">Sucursales - Datos del día anterior (<?php echo date('d/m/Y', strtotime($yesterday)); ?>)</h1>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <?php
-            $chartCount = 0;
-            foreach ($data as $item) {
-                $chartCount++;
-                $chartId = 'chart-' . $chartCount;
-            ?>
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h2 class="text-2xl font-semibold mb-4"><?php echo $item['sucursal']; ?></h2>
-                    <p class="text-lg">Ventas: <strong>$<?php echo number_format($item['ventas'], 2); ?></strong></p>
-                    <p class="text-lg">Gastos: <strong>$<?php echo number_format($item['gastos'], 2); ?></strong></p>
-                    
-                    <!-- Gráfico -->
-                    <div class="chart-container mt-4" style="position: relative; height: 250px; width: 100%;">
-                        <canvas id="<?php echo $chartId; ?>"></canvas>
-                    </div>
-                    <script>
-                        var ctx<?php echo $chartCount; ?> = document.getElementById('<?php echo $chartId; ?>').getContext('2d');
-                        new Chart(ctx<?php echo $chartCount; ?>, {
-                            type: 'bar',
-                            data: {
-                                labels: ['Ventas', 'Gastos'],
-                                datasets: [{
-                                    label: 'Datos del día anterior',
-                                    data: [<?php echo $item['ventas']; ?>, <?php echo $item['gastos']; ?>],
-                                    backgroundColor: ['rgba(75, 192, 192, 0.2)', 'rgba(255, 99, 132, 0.2)'],
-                                    borderColor: ['rgba(75, 192, 192, 1)', 'rgba(255, 99, 132, 1)'],
-                                    borderWidth: 1
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                scales: {
-                                    y: {
-                                        beginAtZero: true
+        <?php foreach ($grouped_data as $tipo => $sucursales): ?>
+            <h2 class="text-2xl font-bold mb-5"><?php echo $tipo; ?></h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+                <?php
+                $chartCount = 0;
+                foreach ($sucursales as $item) {
+                    $chartCount++;
+                    $chartId = 'chart-' . $chartCount;
+                ?>
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h2 class="text-2xl font-semibold mb-4"><?php echo $item['sucursal']; ?></h2>
+                        <p class="text-lg">Ventas: <strong>$<?php echo number_format($item['ventas'], 2); ?></strong></p>
+                        <p class="text-lg">Gastos: <strong>$<?php echo number_format($item['gastos'], 2); ?></strong></p>
+                        
+                        <!-- Gráfico -->
+                        <div class="chart-container mt-4" style="position: relative; height: 250px; width: 100%;">
+                            <canvas id="<?php echo $chartId; ?>"></canvas>
+                        </div>
+                        <script>
+                            var ctx<?php echo $chartCount; ?> = document.getElementById('<?php echo $chartId; ?>').getContext('2d');
+                            new Chart(ctx<?php echo $chartCount; ?>, {
+                                type: 'bar',
+                                data: {
+                                    labels: ['Ventas', 'Gastos'],
+                                    datasets: [{
+                                        label: 'Datos del día anterior',
+                                        data: [<?php echo $item['ventas']; ?>, <?php echo $item['gastos']; ?>],
+                                        backgroundColor: ['rgba(75, 192, 192, 0.2)', 'rgba(255, 99, 132, 0.2)'],
+                                        borderColor: ['rgba(75, 192, 192, 1)', 'rgba(255, 99, 132, 1)'],
+                                        borderWidth: 1
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    scales: {
+                                        y: {
+                                            beginAtZero: true
+                                        }
                                     }
                                 }
-                            }
-                        });
-                    </script>
-                </div>
-            <?php } ?>
-        </div>
+                            });
+                        </script>
+                    </div>
+                <?php } ?>
+            </div>
+        <?php endforeach; ?>
     </div>
 </body>
 </html>

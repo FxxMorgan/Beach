@@ -20,8 +20,8 @@ $sucursales_result = $conn->query($sucursales_query);
 if (isset($_POST['agregar_sucursal'])) {
     $nombre = $_POST['nombre'];
 
-    // Insertar la nueva sucursal en la base de datos
-    $query = "INSERT INTO sucursales (nombre) VALUES ('$nombre')";
+// Insertar la nueva sucursal en la base de datos
+$query = "INSERT INTO sucursales (nombre, tipo) VALUES ('$nombre', '$tipo')";
     if ($conn->query($query) === TRUE) {
         echo "<script>Swal.fire('Operación Exitosa', 'Sucursal \" . $nombre . \" agregada exitosamente', 'success');</script>";
     } else {
@@ -34,8 +34,8 @@ if (isset($_POST['actualizar_sucursal'])) {
     $id = $_POST['id'];
     $nombre = $_POST['nombre'];
 
-    // Actualizar la sucursal en la base de datos
-    $query = "UPDATE sucursales SET nombre='$nombre' WHERE id='$id'";
+// Actualizar la sucursal en la base de datos
+$query = "UPDATE sucursales SET nombre='$nombre', tipo='$tipo' WHERE id='$id'";
     if ($conn->query($query) === TRUE) {
         echo "<script>Swal.fire('Operación Exitosa', 'Sucursal actualizada exitosamente', 'success');</script>";
     } else {
@@ -84,13 +84,20 @@ if (!function_exists('auditoria')) {
     <div class="container mx-auto mt-10">
         <h1 class="text-3xl font-bold text-center mb-5">Administrar Sucursales</h1>
         <div class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
-            <form id="agregarSucursalForm" method="POST">
-                <label for="nombre" class="block text-gray-700 font-bold mb-2">Nombre de la Sucursal</label>
-                <input type="text" id="nombre" name="nombre" required
-                       class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
-                <button type="submit"
-                        class="w-full bg-green-600 text-white p-3 rounded-lg font-bold hover:bg-green-700">Agregar Sucursal</button>
-            </form>
+        <form id="agregarSucursalForm" method="POST">
+    <label for="nombre" class="block text-gray-700 font-bold mb-2">Nombre de la Sucursal</label>
+    <input type="text" id="nombre" name="nombre" required class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
+
+    <label for="tipo" class="block text-gray-700 font-bold mb-2">Tipo de Sucursal</label>
+    <select id="tipo" name="tipo" required class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
+        <option value="Ferreteria">Ferreteria</option>
+        <option value="Multitienda">Multitienda</option>
+        <option value="Cabañas">Cabañas</option>
+        <option value="Supermercado">Supermercado</option>
+    </select>
+
+    <button type="submit" class="w-full bg-green-600 text-white p-3 rounded-lg font-bold hover:bg-green-700">Agregar Sucursal</button>
+</form>
         </div>
         <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md mt-10">
             <h2 class="text-2xl font-bold mb-5">Sucursales</h2>
