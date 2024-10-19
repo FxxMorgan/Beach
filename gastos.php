@@ -14,10 +14,10 @@ if ($conn->connect_error) {
 date_default_timezone_set('America/Santiago');
 
 $usuario_id = $_SESSION['usuario_id'];
-$sucursal_id = $_GET['sucursal_id'] ?? $_SESSION['sucursal_id'];  // Usamos GET para filtrar
+$sucursal_id = $_GET['sucursal_id'] ?? $_SESSION['sucursal_id']; // Usamos GET para filtrar
 $rol = $_SESSION['rol'];
 $success_message = "";
-$time_range = $_GET['time_range'] ?? 'month';  // Filtrar por GET
+$time_range = $_GET['time_range'] ?? 'month'; // Filtrar por GET
 $start_date = $_GET['start_date'] ?? null;
 $end_date = $_GET['end_date'] ?? null;
 $date_format = '%Y-%m'; // Default es mensual
@@ -55,13 +55,13 @@ function auditoria($conn, $accion, $usuario_id) {
 
 // Registro de gastos solo si es una solicitud POST
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['monto'])) {
-    // Validar que monto y tipo estén definidos antes de acceder
-    $tipo = $_POST['tipo'] ?? ''; // Si no está definido, asignar vacío
+    $gasto_tipo = $_POST['gasto_tipo'] ?? 'fijo'; // Nuevo campo para el tipo de gasto
+    $tipo = $_POST['tipo'] ?? ($_POST['descripcion'] ?? ''); // Si es variable, usar la descripción
     $monto = isset($_POST['monto']) ? str_replace(['.', ','], '', $_POST['monto']) : 0;
     $fecha = date('Y-m-d');
     
-    $insert_query = $conn->prepare("INSERT INTO gastos (tipo, monto, fecha, usuario_id, sucursal_id) VALUES (?, ?, ?, ?, ?)");
-    $insert_query->bind_param('sdsii', $tipo, $monto, $fecha, $usuario_id, $sucursal_id);
+    $insert_query = $conn->prepare("INSERT INTO gastos (gasto_tipo, tipo, monto, fecha, usuario_id, sucursal_id) VALUES (?, ?, ?, ?, ?, ?)");
+    $insert_query->bind_param('sssiii', $gasto_tipo, $tipo, $monto, $fecha, $usuario_id, $sucursal_id);
     if ($insert_query->execute() === TRUE) {
         auditoria($conn, "Gasto registrado: Tipo: $tipo, Monto: $monto, Fecha: $fecha, Sucursal ID: $sucursal_id", $usuario_id);
         $success_message = "Gasto registrado exitosamente";
@@ -210,6 +210,13 @@ while ($row = $gastos_result->fetch_assoc()) {
         <div class="max-w-4xl mx-auto bg-white p-10 rounded-lg shadow-md">
             <form method="POST" class="mb-6">
                 <div class="mb-4">
+                    <label for="gasto_tipo" class="block text-gray-700 font-bold mb-2">Tipo de Gasto</label>
+                    <select id="gasto_tipo" name="gasto_tipo" required class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="fijo">Gasto Fijo</option>
+                        <option value="variable">Gasto Variable</option>
+                    </select>
+                </div>
+                <div class="mb-4" id="description_container">
                     <label for="tipo" class="block text-gray-700 font-bold mb-2">Descripción del Gasto</label>
                     <select id="tipo" name="tipo" required class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         <option value="Internet">Internet</option>
@@ -233,6 +240,7 @@ while ($row = $gastos_result->fetch_assoc()) {
                 <thead>
                     <tr>
                         <th>ID</th>
+                        <th>Tipo</th>
                         <th>Descripción</th>
                         <th>Monto</th>
                         <th>Fecha</th>
@@ -244,6 +252,7 @@ while ($row = $gastos_result->fetch_assoc()) {
                     <?php while ($row = $result->fetch_assoc()): ?>
                         <tr>
                             <td><?php echo $row['id']; ?></td>
+                            <td><?php echo $row['gasto_tipo']; ?></td>
                             <td><?php echo $row['tipo']; ?></td>
                             <td><?php echo "$" . number_format($row['monto'], 0, '', '.'); ?></td>
                             <td><?php echo $row['fecha']; ?></td>
@@ -298,6 +307,27 @@ while ($row = $gastos_result->fetch_assoc()) {
                         beginAtZero: true
                     }
                 }
+            }
+        });
+
+        // Cambiar formulario según tipo de gasto
+        $('#gasto_tipo').change(function() {
+            var tipoGasto = $(this).val();
+            if (tipoGasto === 'variable') {
+                $('#description_container').html(`
+                    <label for="descripcion" class="block text-gray-700 font-bold mb-2">Descripción del Gasto</label>
+                    <input type="text" id="descripcion" name="descripcion" required class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Descripción del gasto">
+                `);
+            } else {
+                $('#description_container').html(`
+                    <label for="tipo" class="block text-gray-700 font-bold mb-2">Descripción del Gasto</label>
+                    <select id="tipo" name="tipo" required class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="Internet">Internet</option>
+                        <option value="Electricidad">Electricidad</option>
+                        <option value="Agua">Agua</option>
+                        <option value="Gas">Gas</option>
+                    </select>
+                `);
             }
         });
     });
