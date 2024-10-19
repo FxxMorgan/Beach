@@ -219,9 +219,15 @@ if ($rol == 'TI') {
                 <?php if ($rol == 'TI' || $rol == 'jefe'): ?>
                     <a href="administrar_usuarios.php?sucursal_id=<?php echo $sucursal_id; ?>" class="btn-custom p-3 rounded-lg font-bold hover:bg-[#e54b00] mb-2">Administrar Usuarios</a>
                     <a href="crear_usuario.php?sucursal_id=<?php echo $sucursal_id; ?>" class="btn-custom p-3 rounded-lg font-bold hover:bg-[#e54b00] mb-2">Agregar Usuarios</a>
+<<<<<<< HEAD
                     <?php if ($rol == 'TI'): ?>
                         <a href="administrar_sucursales.php" class="btn-custom p-3 rounded-lg font-bold hover:bg-[#e54b00] mb-2">Administrar Sucursales</a>
                         <a href="permisos.php" class="btn-custom p-3 rounded-lg font-bold hover:bg-[#e54b00] mb-2">Manage Permissions</a>
+=======
+                    <a href="comparativa.php" class="btn-custom p-3 rounded-lg font-bold hover:bg-[#e54b00] mb-2">Comparativa</a>
+                    <?php if ($rol == 'TI'): ?>
+                        <a href="administrar_sucursales.php" class="btn-custom p-3 rounded-lg font-bold hover:bg-[#e54b00] mb-2">Administrar Sucursales</a>
+>>>>>>> 04a52f3ddd7ad864234b3e40cfef3ad462e5fae3
                     <?php endif; ?>
                 <?php endif; ?>
             </nav>

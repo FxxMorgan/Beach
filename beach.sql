@@ -3,7 +3,11 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
+<<<<<<< HEAD
 -- Tiempo de generación: 19-10-2024 a las 17:11:22
+=======
+-- Tiempo de generación: 17-10-2024 a las 15:44:38
+>>>>>>> 04a52f3ddd7ad864234b3e40cfef3ad462e5fae3
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.2.12
 
@@ -199,6 +203,7 @@ INSERT INTO `auditoria` (`id`, `usuario`, `accion`, `fecha`, `usuario_id`, `usua
 (156, '', 'Usuario agregado: jefe (jefe@jefe.cl), Rol: jefe, Sucursal ID: 8', '2024-10-14 19:27:46', 4, 'default_user'),
 (157, 'default_user', 'Usuario 44 actualizado', '2024-10-14 19:27:56', NULL, NULL),
 (158, 'default_user', 'Usuario 47 actualizado', '2024-10-15 12:36:04', NULL, NULL),
+<<<<<<< HEAD
 (159, '', 'Usuario agregado: admin (admin@admin.cl), Rol: jefe, Sucursal ID: 1', '2024-10-16 12:55:55', 4, ''),
 (160, '', 'Gasto registrado: Tipo: bencina coelemu, Monto: 25000, Fecha: 2024-10-18, Sucursal ID: 1', '2024-10-18 16:14:15', 4, 'Fernando'),
 (161, '', 'Gasto registrado: Tipo: Becina, Monto: 51500, Fecha: 2024-10-19, Sucursal ID: 1', '2024-10-19 12:39:43', 4, 'Fernando'),
@@ -209,6 +214,9 @@ INSERT INTO `auditoria` (`id`, `usuario`, `accion`, `fecha`, `usuario_id`, `usua
 (166, '', 'Gasto registrado: Tipo: , Monto: 1000, Fecha: 2024-10-19 10:15:38, Sucursal ID: 1', '2024-10-19 13:15:38', 4, 'Fernando'),
 (167, '', 'Gasto registrado: Tipo: Agua, Monto: 123467, Fecha: 2024-10-19 10:16:21, Sucursal ID: 1', '2024-10-19 13:16:21', 4, 'Fernando'),
 (168, '', 'Gasto registrado: Tipo: perrito, Monto: 1500, Fecha: 2024-10-19 10:22:18, Sucursal ID: 1', '2024-10-19 13:22:18', 4, 'Fernando');
+=======
+(159, '', 'Usuario agregado: admin (admin@admin.cl), Rol: jefe, Sucursal ID: 1', '2024-10-16 12:55:55', 4, '');
+>>>>>>> 04a52f3ddd7ad864234b3e40cfef3ad462e5fae3
 
 -- --------------------------------------------------------
 
@@ -252,6 +260,7 @@ CREATE TABLE `gastos` (
 -- Volcado de datos para la tabla `gastos`
 --
 
+<<<<<<< HEAD
 INSERT INTO `gastos` (`id`, `fecha`, `tipo`, `monto`, `usuario_id`, `sucursal_id`, `gasto_tipo`) VALUES
 (1, '2024-03-24 00:00:00', 'electricidad', 45769214.00, 4, 1, 'fijo'),
 (2, '2024-03-02 00:00:00', 'luz', 37676447.00, 4, 1, 'fijo'),
@@ -360,6 +369,107 @@ INSERT INTO `gastos` (`id`, `fecha`, `tipo`, `monto`, `usuario_id`, `sucursal_id
 (105, '2024-10-19 10:15:38', '', 1000.00, 4, 1, 'fijo'),
 (106, '2024-10-19 10:16:21', 'Agua', 123467.00, 4, 1, 'fijo'),
 (107, '0000-00-00 00:00:00', 'perrito', 1500.00, 4, 1, 'variable');
+=======
+INSERT INTO `gastos` (`id`, `fecha`, `tipo`, `monto`, `usuario_id`, `sucursal_id`) VALUES
+(1, '2024-03-24', 'electricidad', 45769214.00, 4, 1),
+(2, '2024-03-02', 'luz', 37676447.00, 4, 1),
+(3, '2024-03-07', 'agua', 35707481.00, 4, 1),
+(4, '2024-03-11', 'internet', 38203578.00, 4, 1),
+(5, '2024-03-15', 'gas', 40510846.00, 4, 1),
+(6, '2024-04-23', 'electricidad', 130513.00, 4, 1),
+(7, '2024-04-08', 'luz', 41471622.00, 4, 1),
+(8, '2024-04-06', 'agua', 46906387.00, 4, 1),
+(9, '2024-04-14', 'internet', 41455808.00, 4, 1),
+(10, '2024-04-21', 'gas', 34023083.00, 4, 1),
+(11, '2024-05-01', 'electricidad', 49063742.00, 4, 1),
+(12, '2024-05-27', 'luz', 22474235.00, 4, 1),
+(13, '2024-05-01', 'agua', 20547666.00, 4, 1),
+(14, '2024-05-16', 'internet', 29412623.00, 4, 1),
+(15, '2024-05-28', 'gas', 8150476.00, 4, 1),
+(16, '2024-06-08', 'electricidad', 49580080.00, 4, 1),
+(17, '2024-06-07', 'luz', 22936205.00, 4, 1),
+(18, '2024-06-13', 'agua', 35375447.00, 4, 1),
+(19, '2024-06-04', 'internet', 47566632.00, 4, 1),
+(20, '2024-06-28', 'gas', 44601451.00, 4, 1),
+(21, '2024-07-18', 'electricidad', 49661201.00, 4, 1),
+(22, '2024-07-17', 'luz', 32243992.00, 4, 1),
+(23, '2024-07-02', 'agua', 46139900.00, 4, 1),
+(24, '2024-07-17', 'internet', 10669029.00, 4, 1),
+(25, '2024-07-03', 'gas', 16204892.00, 4, 1),
+(26, '2024-08-08', 'electricidad', 3082210.00, 4, 1),
+(27, '2024-08-18', 'luz', 5940885.00, 4, 1),
+(28, '2024-08-07', 'agua', 18161900.00, 4, 1),
+(29, '2024-08-26', 'internet', 42764400.00, 4, 1),
+(30, '2024-08-11', 'gas', 15081260.00, 4, 1),
+(31, '2024-09-21', 'electricidad', 35004967.00, 4, 1),
+(32, '2024-09-11', 'luz', 43159076.00, 4, 1),
+(33, '2024-09-07', 'agua', 47667608.00, 4, 1),
+(34, '2024-09-27', 'internet', 41353070.00, 4, 1),
+(35, '2024-09-12', 'gas', 17800120.00, 4, 1),
+(36, '2024-03-09', 'electricidad', 3299650.00, 4, 8),
+(37, '2024-03-21', 'luz', 26058248.00, 4, 8),
+(38, '2024-03-14', 'agua', 20278942.00, 4, 8),
+(39, '2024-03-05', 'internet', 36432639.00, 4, 8),
+(40, '2024-03-05', 'gas', 44573046.00, 4, 8),
+(41, '2024-04-21', 'electricidad', 45860995.00, 4, 8),
+(42, '2024-04-15', 'luz', 49466131.00, 4, 8),
+(43, '2024-04-15', 'agua', 24972869.00, 4, 8),
+(44, '2024-04-16', 'internet', 49986492.00, 4, 8),
+(45, '2024-04-19', 'gas', 18226697.00, 4, 8),
+(46, '2024-05-09', 'electricidad', 29396076.00, 4, 8),
+(47, '2024-05-24', 'luz', 31138281.00, 4, 8),
+(48, '2024-05-02', 'agua', 14493791.00, 4, 8),
+(49, '2024-05-20', 'internet', 46521683.00, 4, 8),
+(50, '2024-05-25', 'gas', 17644320.00, 4, 8),
+(51, '2024-06-10', 'electricidad', 15149125.00, 4, 8),
+(52, '2024-06-05', 'luz', 22007681.00, 4, 8),
+(53, '2024-06-14', 'agua', 18722380.00, 4, 8),
+(54, '2024-06-24', 'internet', 47316966.00, 4, 8),
+(55, '2024-06-18', 'gas', 21752199.00, 4, 8),
+(56, '2024-07-10', 'electricidad', 7968267.00, 4, 8),
+(57, '2024-07-15', 'luz', 3227254.00, 4, 8),
+(58, '2024-07-08', 'agua', 16029887.00, 4, 8),
+(59, '2024-07-13', 'internet', 42551398.00, 4, 8),
+(60, '2024-07-02', 'gas', 22108745.00, 4, 8),
+(61, '2024-08-14', 'electricidad', 23611712.00, 4, 8),
+(62, '2024-08-23', 'luz', 31376154.00, 4, 8),
+(63, '2024-08-01', 'agua', 5152988.00, 4, 8),
+(64, '2024-08-09', 'internet', 8954612.00, 4, 8),
+(65, '2024-08-15', 'gas', 21358496.00, 4, 8),
+(66, '2024-09-19', 'electricidad', 31081942.00, 4, 8),
+(67, '2024-09-15', 'luz', 16628651.00, 4, 8),
+(68, '2024-09-19', 'agua', 17405047.00, 4, 8),
+(69, '2024-09-26', 'internet', 10240104.00, 4, 8),
+(70, '2024-09-19', 'gas', 44989967.00, 4, 8),
+(71, '2024-10-09', 'Internet', 99999.00, NULL, 9),
+(72, '2024-10-09', 'Agua', 768758.00, NULL, 9),
+(73, '2024-10-09', 'Electricidad', 128510.00, NULL, 9),
+(74, '2024-10-09', 'Electricidad', 0.00, NULL, 1),
+(75, '2024-10-09', 'Internet', 0.00, NULL, 1),
+(76, '2024-10-09', 'Internet', 0.00, NULL, 1),
+(77, '2024-10-09', 'Internet', 99999999.99, NULL, 1),
+(78, '2024-10-09', 'Internet', 2131321.00, NULL, 1),
+(79, '2024-10-09', 'Internet', 43222.00, NULL, 1),
+(80, '2024-10-09', 'Internet', 123213.00, NULL, 1),
+(81, '2024-10-09', 'Internet', 12123.00, NULL, 1),
+(82, '2024-10-09', 'Internet', 12123.00, NULL, 1),
+(83, '2024-10-09', 'Internet', 13213.00, NULL, 1),
+(84, '2024-10-09', 'Internet', 99999999.99, NULL, 1),
+(85, '2024-10-09', 'Internet', 128510.00, NULL, 1),
+(86, '2024-10-09', 'Electricidad', 0.00, NULL, 1),
+(87, '2024-10-09', 'Electricidad', 0.00, NULL, 1),
+(88, '2024-10-09', 'Internet', 1213.00, NULL, 1),
+(89, '2024-10-09', 'Internet', 29882009.00, NULL, 1),
+(90, '2024-10-09', 'Internet', 99999999.99, NULL, 1),
+(91, '2024-10-09', 'Internet', 99999999.99, NULL, 1),
+(92, '2024-10-09', 'Internet', 99999999.99, NULL, 1),
+(93, '2024-10-09', 'Internet', 88765.00, NULL, 1),
+(94, '2024-10-09', 'Internet', 88765.00, NULL, 1),
+(95, '2024-10-11', 'Electricidad', 768758.00, NULL, 1),
+(96, '2024-10-14', 'Electricidad', 123780.00, 4, 0),
+(97, '2024-10-14', 'Internet', 122510.00, 4, 0),
+(98, '2024-10-15', 'Agua', 27600.00, 4, 9);
+>>>>>>> 04a52f3ddd7ad864234b3e40cfef3ad462e5fae3
 
 -- --------------------------------------------------------
 
@@ -459,6 +569,7 @@ INSERT INTO `inventarios` (`id`, `fecha`, `descripcion`, `cantidad`, `usuario_id
 (75, '2024-10-14', 'Kapo Sabor Manzana', 20, 4, 1, 'ingreso'),
 (76, '2024-10-14', 'Kapo Sabor Manzana', 20, 4, 1, 'retiro'),
 (77, '2024-10-15', 'Kapo Sabor Manzana', 100, 4, 1, 'ingreso');
+<<<<<<< HEAD
 
 -- --------------------------------------------------------
 
@@ -491,6 +602,8 @@ INSERT INTO `roles` (`id`, `name`) VALUES
 (1, 'TI'),
 (2, 'jefe'),
 (3, 'encargado');
+=======
+>>>>>>> 04a52f3ddd7ad864234b3e40cfef3ad462e5fae3
 
 -- --------------------------------------------------------
 
@@ -720,7 +833,11 @@ ALTER TABLE `ventas`
 -- AUTO_INCREMENT de la tabla `auditoria`
 --
 ALTER TABLE `auditoria`
+<<<<<<< HEAD
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=169;
+=======
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=160;
+>>>>>>> 04a52f3ddd7ad864234b3e40cfef3ad462e5fae3
 
 --
 -- AUTO_INCREMENT de la tabla `facturas`
@@ -732,13 +849,18 @@ ALTER TABLE `facturas`
 -- AUTO_INCREMENT de la tabla `gastos`
 --
 ALTER TABLE `gastos`
+<<<<<<< HEAD
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=108;
+=======
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=99;
+>>>>>>> 04a52f3ddd7ad864234b3e40cfef3ad462e5fae3
 
 --
 -- AUTO_INCREMENT de la tabla `inventarios`
 --
 ALTER TABLE `inventarios`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=78;
+<<<<<<< HEAD
 
 --
 -- AUTO_INCREMENT de la tabla `permisos`
@@ -751,6 +873,8 @@ ALTER TABLE `permisos`
 --
 ALTER TABLE `roles`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+=======
+>>>>>>> 04a52f3ddd7ad864234b3e40cfef3ad462e5fae3
 
 --
 -- AUTO_INCREMENT de la tabla `sucursales`

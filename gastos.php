@@ -14,10 +14,17 @@ if ($conn->connect_error) {
 date_default_timezone_set('America/Santiago');
 
 $usuario_id = $_SESSION['usuario_id'];
+<<<<<<< HEAD
 $sucursal_id = $_GET['sucursal_id'] ?? $_SESSION['sucursal_id'];
 $rol = $_SESSION['rol'];
 $success_message = "";
 $time_range = $_GET['time_range'] ?? 'month';
+=======
+$sucursal_id = $_GET['sucursal_id'] ?? $_SESSION['sucursal_id']; // Usamos GET para filtrar
+$rol = $_SESSION['rol'];
+$success_message = "";
+$time_range = $_GET['time_range'] ?? 'month'; // Filtrar por GET
+>>>>>>> 04a52f3ddd7ad864234b3e40cfef3ad462e5fae3
 $start_date = $_GET['start_date'] ?? null;
 $end_date = $_GET['end_date'] ?? null;
 $date_format = '%Y-%m';
@@ -54,6 +61,7 @@ function auditoria($conn, $accion, $usuario_id) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['monto'])) {
+<<<<<<< HEAD
     // Validar el tipo de gasto
     $gasto_tipo = $_POST['gasto_tipo'] ?? 'fijo';  // Campo tipo de gasto
     
@@ -75,6 +83,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['monto'])) {
     $insert_query = $conn->prepare("INSERT INTO gastos (gasto_tipo, tipo, monto, fecha, usuario_id, sucursal_id) VALUES (?, ?, ?, ?, ?, ?)");
     $insert_query->bind_param('sssiii', $gasto_tipo, $tipo, $monto, $fecha, $usuario_id, $sucursal_id);
     
+=======
+    $gasto_tipo = $_POST['gasto_tipo'] ?? 'fijo'; // Nuevo campo para el tipo de gasto
+    $tipo = $_POST['tipo'] ?? ($_POST['descripcion'] ?? ''); // Si es variable, usar la descripción
+    $monto = isset($_POST['monto']) ? str_replace(['.', ','], '', $_POST['monto']) : 0;
+    $fecha = date('Y-m-d');
+    
+    $insert_query = $conn->prepare("INSERT INTO gastos (gasto_tipo, tipo, monto, fecha, usuario_id, sucursal_id) VALUES (?, ?, ?, ?, ?, ?)");
+    $insert_query->bind_param('sssiii', $gasto_tipo, $tipo, $monto, $fecha, $usuario_id, $sucursal_id);
+>>>>>>> 04a52f3ddd7ad864234b3e40cfef3ad462e5fae3
     if ($insert_query->execute() === TRUE) {
         auditoria($conn, "Gasto registrado: Tipo: $tipo, Monto: $monto, Fecha: $fecha, Sucursal ID: $sucursal_id", $usuario_id);
         $success_message = "Gasto registrado exitosamente";
@@ -402,7 +419,32 @@ while ($row = $gastos_result->fetch_assoc()) {
                     beginAtZero: true
                 }
             }
+<<<<<<< HEAD
         }
+=======
+        });
+
+        // Cambiar formulario según tipo de gasto
+        $('#gasto_tipo').change(function() {
+            var tipoGasto = $(this).val();
+            if (tipoGasto === 'variable') {
+                $('#description_container').html(`
+                    <label for="descripcion" class="block text-gray-700 font-bold mb-2">Descripción del Gasto</label>
+                    <input type="text" id="descripcion" name="descripcion" required class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Descripción del gasto">
+                `);
+            } else {
+                $('#description_container').html(`
+                    <label for="tipo" class="block text-gray-700 font-bold mb-2">Descripción del Gasto</label>
+                    <select id="tipo" name="tipo" required class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="Internet">Internet</option>
+                        <option value="Electricidad">Electricidad</option>
+                        <option value="Agua">Agua</option>
+                        <option value="Gas">Gas</option>
+                    </select>
+                `);
+            }
+        });
+>>>>>>> 04a52f3ddd7ad864234b3e40cfef3ad462e5fae3
     });
 
     // Mostrar/ocultar inputs de fecha según el rango de tiempo
