@@ -22,6 +22,14 @@ $usuario_id = $_SESSION['usuario_id'];
 $sucursal_id = $_SESSION['sucursal_id'];
 $rol = $_SESSION['rol'];
 
+
+// redirigir a otro dashboard si el rol es dueño
+
+if ($rol == 'dueño') {
+    header('Location: dashboard_card.php');
+    exit();
+}
+
 // Obtener lista de sucursales solo para el rol TI
 $sucursales = null;
 if ($rol == 'TI') {
@@ -159,11 +167,21 @@ if ($rol == 'TI') {
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        .chart-container {
+
+.chart-container {
             position: relative;
             height: 400px;
             width: 100%;
             padding-bottom: 120px;
+        }
+        
+        /* Clase personalizada para los botones */
+        .btn-custom {
+            background-color: #fe5b05; /* Color personalizado */
+            color: white; /* Texto blanco */
+        }
+        .btn-custom:hover {
+            background-color: #e54b00; /* Color más oscuro para hover */
         }
     </style>
     <script>
@@ -179,13 +197,13 @@ if ($rol == 'TI') {
             } else {
                 dateInputs.forEach(function(input) {
                     input.style.display = 'none';
-                    input.value = ''; // Clear date inputs if not custom
+                    input.value = ''; // Limpiar inputs de fecha si no es personalizado
                 });
             }
         }
         
         timeRangeSelect.addEventListener('change', toggleDateInputs);
-        toggleDateInputs(); // Initial call to set correct visibility on page load
+        toggleDateInputs(); // Llamada inicial para establecer visibilidad correcta al cargar la página
     });
     </script>
 </head>
@@ -194,16 +212,16 @@ if ($rol == 'TI') {
         <h1 class="text-3xl font-bold text-center mb-5">Dashboard - Sucursal: <?php echo isset($sucursal['nombre']) ? $sucursal['nombre'] : 'No seleccionada'; ?></h1>
         <div class="max-w-8xl mx-auto bg-white p-6 rounded-lg shadow-md">
             <nav class="flex flex-wrap justify-center space-x-4 mb-6">
-                <a href="ventas.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mb-2">Ventas</a>
-                <a href="inventarios.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mb-2">Inventarios</a>
-                <a href="gastos.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mb-2">Gastos</a>
+                <!-- Aplicar la clase btn-custom -->
+                <a href="ventas.php?sucursal_id=<?php echo $sucursal_id; ?>" class="btn-custom p-3 rounded-lg font-bold hover:bg-[#e54b00] mb-2">Ventas</a>
+                <a href="inventarios.php?sucursal_id=<?php echo $sucursal_id; ?>" class="btn-custom p-3 rounded-lg font-bold hover:bg-[#e54b00] mb-2">Inventarios</a>
+                <a href="gastos.php?sucursal_id=<?php echo $sucursal_id; ?>" class="btn-custom p-3 rounded-lg font-bold hover:bg-[#e54b00] mb-2">Gastos</a>
                 <?php if ($rol == 'TI' || $rol == 'jefe'): ?>
-                    <a href="administrar_usuarios.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mb-2">Administrar Usuarios</a>
-                    <a href="crear_usuario.php?sucursal_id=<?php echo $sucursal_id; ?>" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mb-2">Agregar Usuarios</a>
-                    <a href="comparativa.php" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mb-2">Comparativa</a>
+                    <a href="administrar_usuarios.php?sucursal_id=<?php echo $sucursal_id; ?>" class="btn-custom p-3 rounded-lg font-bold hover:bg-[#e54b00] mb-2">Administrar Usuarios</a>
+                    <a href="crear_usuario.php?sucursal_id=<?php echo $sucursal_id; ?>" class="btn-custom p-3 rounded-lg font-bold hover:bg-[#e54b00] mb-2">Agregar Usuarios</a>
                     <?php if ($rol == 'TI'): ?>
-                        <a href="administrar_sucursales.php" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mb-2">Administrar Sucursales</a>
-                        <a href="auditoria.php" class="bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 mb-2">Auditoría</a>
+                        <a href="administrar_sucursales.php" class="btn-custom p-3 rounded-lg font-bold hover:bg-[#e54b00] mb-2">Administrar Sucursales</a>
+                        <a href="permisos.php" class="btn-custom p-3 rounded-lg font-bold hover:bg-[#e54b00] mb-2">Manage Permissions</a>
                     <?php endif; ?>
                 <?php endif; ?>
             </nav>
@@ -221,7 +239,7 @@ if ($rol == 'TI') {
                     <input type="date" name="start_date" value="<?php echo $start_date; ?>" class="border p-2 rounded-md mb-2 sm:mb-0 sm:mr-2" style="display: none;">
                     <input type="date" name="end_date" value="<?php echo $end_date; ?>" class="border p-2 rounded-md" style="display: none;">
                 </div>
-                <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">Filtrar</button>
+                <button type="submit" class="btn-custom px-4 py-2 rounded-lg hover:bg-[#e54b00]">Filtrar</button>
             </form>
 
             <!-- Gráficos -->

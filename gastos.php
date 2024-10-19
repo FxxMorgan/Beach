@@ -14,13 +14,13 @@ if ($conn->connect_error) {
 date_default_timezone_set('America/Santiago');
 
 $usuario_id = $_SESSION['usuario_id'];
-$sucursal_id = $_GET['sucursal_id'] ?? $_SESSION['sucursal_id'];  // Usamos GET para filtrar
+$sucursal_id = $_GET['sucursal_id'] ?? $_SESSION['sucursal_id'];
 $rol = $_SESSION['rol'];
 $success_message = "";
-$time_range = $_GET['time_range'] ?? 'month';  // Filtrar por GET
+$time_range = $_GET['time_range'] ?? 'month';
 $start_date = $_GET['start_date'] ?? null;
 $end_date = $_GET['end_date'] ?? null;
-$date_format = '%Y-%m'; // Default es mensual
+$date_format = '%Y-%m';
 
 // Obtener lista de sucursales solo para el rol TI
 $sucursales = null;
@@ -37,38 +37,52 @@ if ($sucursal_id != 'todas') {
     $sucursal_query->bind_param('i', $sucursal_id);
     $sucursal_query->execute();
     $sucursal = $sucursal_query->get_result()->fetch_assoc();
-    $sucursal_nombre = $sucursal['nombre'] ?? 'Desconocida'; // Evitar acceso a null
+    $sucursal_nombre = $sucursal['nombre'] ?? 'Desconocida';
 }
 
 // Función de auditoría
 function auditoria($conn, $accion, $usuario_id) {
-    $fecha = date('Y-m-d H:i:s');
+    $fecha = date('Y-m-d H:i:s'); // Utilizamos DATETIME
     $usuario_query = $conn->prepare("SELECT nombre FROM usuarios WHERE id = ?");
     $usuario_query->bind_param('i', $usuario_id);
     $usuario_query->execute();
     $usuario = $usuario_query->get_result()->fetch_assoc();
-    $usuario_nombre = $usuario['nombre'] ?? 'Desconocido'; // Evitar acceso a null
+    $usuario_nombre = $usuario['nombre'] ?? 'Desconocido';
     $query = $conn->prepare("INSERT INTO auditoria (usuario_id, usuario_nombre, accion, fecha) VALUES (?, ?, ?, ?)");
     $query->bind_param('isss', $usuario_id, $usuario_nombre, $accion, $fecha);
     $query->execute();
 }
 
-// Registro de gastos solo si es una solicitud POST
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['monto'])) {
-    // Validar que monto y tipo estén definidos antes de acceder
-    $tipo = $_POST['tipo'] ?? ''; // Si no está definido, asignar vacío
-    $monto = isset($_POST['monto']) ? str_replace(['.', ','], '', $_POST['monto']) : 0;
-    $fecha = date('Y-m-d');
+    // Validar el tipo de gasto
+    $gasto_tipo = $_POST['gasto_tipo'] ?? 'fijo';  // Campo tipo de gasto
     
-    $insert_query = $conn->prepare("INSERT INTO gastos (tipo, monto, fecha, usuario_id, sucursal_id) VALUES (?, ?, ?, ?, ?)");
-    $insert_query->bind_param('sdsii', $tipo, $monto, $fecha, $usuario_id, $sucursal_id);
+    // Si el gasto es variable, usamos la descripción del usuario
+    if ($gasto_tipo === 'variable') {
+        $descripcion = $_POST['descripcion'] ?? '';  // Usar el campo 'descripcion' si es variable
+        $tipo = $descripcion;
+    } else {
+        $tipo = $_POST['tipo'] ?? '';  // Si es fijo, usamos el campo 'tipo'
+    }
+    
+    // Procesar monto
+    $monto = isset($_POST['monto']) ? str_replace(['.', ','], '', $_POST['monto']) : 0;
+    
+    // Generar fecha con DATETIME
+    $fecha = date('Y-m-d H:i:s');  // Cambiado a DATETIME
+
+    // Inserción en la base de datos
+    $insert_query = $conn->prepare("INSERT INTO gastos (gasto_tipo, tipo, monto, fecha, usuario_id, sucursal_id) VALUES (?, ?, ?, ?, ?, ?)");
+    $insert_query->bind_param('sssiii', $gasto_tipo, $tipo, $monto, $fecha, $usuario_id, $sucursal_id);
+    
     if ($insert_query->execute() === TRUE) {
         auditoria($conn, "Gasto registrado: Tipo: $tipo, Monto: $monto, Fecha: $fecha, Sucursal ID: $sucursal_id", $usuario_id);
         $success_message = "Gasto registrado exitosamente";
     } else {
-        echo "Error: " . $conn->error;
+        echo "Error en la inserción: " . $conn->error;
     }
 }
+
 
 // Configuración de formato y condición de fecha según la selección del usuario
 $date_condition = '';
@@ -115,14 +129,13 @@ if ($sucursal_id != 'todas') {
 }
 
 if ($date_condition) {
-    $gastos_query .= " " . $date_condition;  // Solo agregar si se seleccionó rango de fechas personalizado
+    $gastos_query .= " " . $date_condition;
 }
 
 $gastos_query .= " GROUP BY periodo ORDER BY periodo ASC";
 
 $gastos_stmt = $conn->prepare($gastos_query);
 
-// Si se seleccionó un rango de fechas personalizado, agregar parámetros para las fechas
 if ($sucursal_id != 'todas' && $date_condition) {
     $gastos_stmt->bind_param('iss', $sucursal_id, $start_date, $end_date);
 } else if ($sucursal_id != 'todas') {
@@ -139,6 +152,73 @@ while ($row = $gastos_result->fetch_assoc()) {
     $gastos_labels[] = $row['periodo'];
     $gastos_data[] = $row['total'];
 }
+
+$gasto_tipo_filtro = $_GET['gasto_tipo_filtro'] ?? 'todos'; // Valor por defecto "todos"
+
+
+
+// Modificar la consulta de gastos según el tipo de gasto
+$query_string = "SELECT g.*, u.nombre as usuario_nombre, s.nombre as sucursal_nombre 
+                 FROM gastos g 
+                 JOIN usuarios u ON g.usuario_id = u.id 
+                 JOIN sucursales s ON g.sucursal_id = s.id 
+                 WHERE 1=1";
+
+if ($sucursal_id != 'todas') {
+    $query_string .= " AND g.sucursal_id = ?";
+}
+
+if ($gasto_tipo_filtro != 'todos') {
+    $query_string .= " AND g.gasto_tipo = ?";
+}
+
+$query = $conn->prepare($query_string);
+
+// Preparar parámetros según la selección del usuario
+if ($sucursal_id != 'todas' && $gasto_tipo_filtro != 'todos') {
+    $query->bind_param('is', $sucursal_id, $gasto_tipo_filtro);
+} elseif ($sucursal_id != 'todas') {
+    $query->bind_param('i', $sucursal_id);
+} elseif ($gasto_tipo_filtro != 'todos') {
+    $query->bind_param('s', $gasto_tipo_filtro);
+}
+
+$query->execute();
+$result = $query->get_result();
+
+// Modificar la consulta del gráfico también
+$gastos_query = "SELECT DATE_FORMAT(fecha, '$date_format') AS periodo, SUM(monto) AS total FROM gastos WHERE 1=1";
+
+if ($sucursal_id != 'todas') {
+    $gastos_query .= " AND sucursal_id = ?";
+}
+
+if ($gasto_tipo_filtro != 'todos') {
+    $gastos_query .= " AND gasto_tipo = ?";
+}
+
+$gastos_query .= " GROUP BY periodo ORDER BY periodo ASC";
+
+$gastos_stmt = $conn->prepare($gastos_query);
+
+// Preparar parámetros para la consulta del gráfico
+if ($sucursal_id != 'todas' && $gasto_tipo_filtro != 'todos') {
+    $gastos_stmt->bind_param('is', $sucursal_id, $gasto_tipo_filtro);
+} elseif ($sucursal_id != 'todas') {
+    $gastos_stmt->bind_param('i', $sucursal_id);
+} elseif ($gasto_tipo_filtro != 'todos') {
+    $gastos_stmt->bind_param('s', $gasto_tipo_filtro);
+}
+
+$gastos_stmt->execute();
+$gastos_result = $gastos_stmt->get_result();
+$gastos_data = [];
+$gastos_labels = [];
+while ($row = $gastos_result->fetch_assoc()) {
+    $gastos_labels[] = $row['periodo'];
+    $gastos_data[] = $row['total'];
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -169,47 +249,68 @@ while ($row = $gastos_result->fetch_assoc()) {
 
         <!-- FORMULARIO DE FILTRO (Rango de tiempo y sucursal) -->
         <?php if ($rol == 'TI'): ?>
-        <form method="GET" id="filterForm" class="mb-6 space-y-4">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label for="time_range" class="block text-lg font-semibold mb-2">Seleccionar Rango de Tiempo:</label>
-                    <select name="time_range" id="time_range" class="border p-2 rounded-md w-full">
-                        <option value="day" <?php echo $time_range == 'day' ? 'selected' : ''; ?>>Diario</option>
-                        <option value="month" <?php echo $time_range == 'month' ? 'selected' : ''; ?>>Mensual</option>
-                        <option value="year" <?php echo $time_range == 'year' ? 'selected' : ''; ?>>Anual</option>
-                        <option value="custom" <?php echo $time_range == 'custom' ? 'selected' : ''; ?>>Personalizado</option>
-                    </select>
-                </div>
+            <form method="GET" id="filterForm" class="mb-6 space-y-4">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+            <label for="time_range" class="block text-lg font-semibold mb-2">Seleccionar Rango de Tiempo:</label>
+            <select name="time_range" id="time_range" class="border p-2 rounded-md w-full">
+                <option value="day" <?php echo $time_range == 'day' ? 'selected' : ''; ?>>Diario</option>
+                <option value="month" <?php echo $time_range == 'month' ? 'selected' : ''; ?>>Mensual</option>
+                <option value="year" <?php echo $time_range == 'year' ? 'selected' : ''; ?>>Anual</option>
+                <option value="custom" <?php echo $time_range == 'custom' ? 'selected' : ''; ?>>Personalizado</option>
+            </select>
+        </div>
 
-                <div>
-                    <label for="sucursal_id" class="block text-lg font-semibold mb-2">Seleccionar Sucursal:</label>
-                    <select name="sucursal_id" id="sucursal_id" class="border p-2 rounded-md w-full">
-                        <option value="todas">Todas</option>
-                        <?php while ($row = $sucursales->fetch_assoc()): ?>
-                            <option value="<?php echo $row['id']; ?>" <?php echo $row['id'] == $sucursal_id ? 'selected' : ''; ?>><?php echo $row['nombre']; ?></option>
-                        <?php endwhile; ?>
-                    </select>
-                </div>
-            </div>
+        <div>
+            <label for="sucursal_id" class="block text-lg font-semibold mb-2">Seleccionar Sucursal:</label>
+            <select name="sucursal_id" id="sucursal_id" class="border p-2 rounded-md w-full">
+                <option value="todas">Todas</option>
+                <?php while ($row = $sucursales->fetch_assoc()): ?>
+                    <option value="<?php echo $row['id']; ?>" <?php echo $row['id'] == $sucursal_id ? 'selected' : ''; ?>><?php echo $row['nombre']; ?></option>
+                <?php endwhile; ?>
+            </select>
+        </div>
 
-            <div id="customDates" class="grid grid-cols-1 sm:grid-cols-2 gap-4" style="display: none;">
-                <div>
-                    <label for="start_date" class="block text-lg font-semibold mb-2">Fecha Inicio:</label>
-                    <input type="date" name="start_date" value="<?php echo $start_date; ?>" class="border p-2 rounded-md w-full">
-                </div>
-                <div>
-                    <label for="end_date" class="block text-lg font-semibold mb-2">Fecha Fin:</label>
-                    <input type="date" name="end_date" value="<?php echo $end_date; ?>" class="border p-2 rounded-md w-full">
-                </div>
-            </div>
-            <button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Filtrar</button>
-        </form>
+        <!-- Nuevo campo para seleccionar el tipo de gasto -->
+        <div>
+            <label for="gasto_tipo_filtro" class="block text-lg font-semibold mb-2">Tipo de Gasto:</label>
+            <select name="gasto_tipo_filtro" id="gasto_tipo_filtro" class="border p-2 rounded-md w-full">
+                <option value="todos">Todos</option>
+                <option value="fijo" <?php echo isset($_GET['gasto_tipo_filtro']) && $_GET['gasto_tipo_filtro'] == 'fijo' ? 'selected' : ''; ?>>Fijo</option>
+                <option value="variable" <?php echo isset($_GET['gasto_tipo_filtro']) && $_GET['gasto_tipo_filtro'] == 'variable' ? 'selected' : ''; ?>>Variable</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Rango de fechas personalizado -->
+    <div id="customDates" class="grid grid-cols-1 sm:grid-cols-2 gap-4" style="display: none;">
+        <div>
+            <label for="start_date" class="block text-lg font-semibold mb-2">Fecha Inicio:</label>
+            <input type="date" name="start_date" value="<?php echo $start_date; ?>" class="border p-2 rounded-md w-full">
+        </div>
+        <div>
+            <label for="end_date" class="block text-lg font-semibold mb-2">Fecha Fin:</label>
+            <input type="date" name="end_date" value="<?php echo $end_date; ?>" class="border p-2 rounded-md w-full">
+        </div>
+    </div>
+
+    <button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700">Filtrar</button>
+</form>
+
+        
         <?php endif; ?>
 
         <!-- FORMULARIO DE REGISTRO DE GASTOS (método POST) -->
         <div class="max-w-4xl mx-auto bg-white p-10 rounded-lg shadow-md">
             <form method="POST" class="mb-6">
                 <div class="mb-4">
+                    <label for="gasto_tipo" class="block text-gray-700 font-bold mb-2">Tipo de Gasto</label>
+                    <select id="gasto_tipo" name="gasto_tipo" required class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="fijo">Gasto Fijo</option>
+                        <option value="variable">Gasto Variable</option>
+                    </select>
+                </div>
+                <div class="mb-4" id="description_container">
                     <label for="tipo" class="block text-gray-700 font-bold mb-2">Descripción del Gasto</label>
                     <select id="tipo" name="tipo" required class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         <option value="Internet">Internet</option>
@@ -233,6 +334,7 @@ while ($row = $gastos_result->fetch_assoc()) {
                 <thead>
                     <tr>
                         <th>ID</th>
+                        <th>Tipo</th>
                         <th>Descripción</th>
                         <th>Monto</th>
                         <th>Fecha</th>
@@ -244,6 +346,7 @@ while ($row = $gastos_result->fetch_assoc()) {
                     <?php while ($row = $result->fetch_assoc()): ?>
                         <tr>
                             <td><?php echo $row['id']; ?></td>
+                            <td><?php echo $row['gasto_tipo']; ?></td>
                             <td><?php echo $row['tipo']; ?></td>
                             <td><?php echo "$" . number_format($row['monto'], 0, '', '.'); ?></td>
                             <td><?php echo $row['fecha']; ?></td>
@@ -271,36 +374,69 @@ while ($row = $gastos_result->fetch_assoc()) {
             }
         });
 
-        // Inicializar DataTables
-        $('#gastosTable').DataTable({
-            responsive: true
-        });
 
-        // Gráfico de gastos
-        var ctxGastos = document.getElementById('gastosChart').getContext('2d');
-        var gastosChart = new Chart(ctxGastos, {
-            type: 'line',
-            data: {
-                labels: <?php echo json_encode($gastos_labels); ?>,
-                datasets: [{
-                    label: 'Gastos',
-                    data: <?php echo json_encode($gastos_data); ?>,
-                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                    borderColor: 'rgba(255, 99, 132, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
+  // Inicializar DataTables
+  $('#gastosTable').DataTable({
+        responsive: true
+    });
+
+    // Gráfico de gastos
+    var ctxGastos = document.getElementById('gastosChart').getContext('2d');
+    var gastosChart = new Chart(ctxGastos, {
+        type: 'line',
+        data: {
+            labels: <?php echo json_encode($gastos_labels); ?>,
+            datasets: [{
+                label: 'Gastos',
+                data: <?php echo json_encode($gastos_data); ?>,
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
                 }
             }
-        });
+        }
     });
+
+    // Mostrar/ocultar inputs de fecha según el rango de tiempo
+    $('#time_range').change(function() {
+        if ($(this).val() === 'custom') {
+            $('#customDates').show();
+        } else {
+            $('#customDates').hide();
+                }
+            });
+        });
+
+
+        // Cambiar formulario según tipo de gasto
+    $('#gasto_tipo').change(function() {
+        var tipoGasto = $(this).val();
+        if (tipoGasto === 'variable') {
+            $('#description_container').html(`
+                <label for="descripcion" class="block text-gray-700 font-bold mb-2">Descripción del Gasto</label>
+                <input type="text" id="descripcion" name="descripcion" required class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Descripción del gasto">
+            `);
+        } else {
+            $('#description_container').html(`
+                <label for="tipo" class="block text-gray-700 font-bold mb-2">Descripción del Gasto</label>
+                <select id="tipo" name="tipo" required class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="Internet">Internet</option>
+                    <option value="Electricidad">Electricidad</option>
+                    <option value="Agua">Agua</option>
+                    <option value="Gas">Gas</option>
+                </select>
+                `);
+            }
+        });
+    
     </script>
 </body>
 </html>
